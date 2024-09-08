@@ -44,3 +44,59 @@ This work is licensed under a
 [cc-by-sa]: http://creativecommons.org/licenses/by-sa/4.0/
 [cc-by-sa-image]: https://licensebuttons.net/l/by-sa/4.0/88x31.png
 [cc-by-sa-shield]: https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg
+
+## (TODO)Project Rubric  
+### 1. README (All Rubric Points REQUIRED)
+#### 1.1 A README with instructions is included with the project
+Yes, it is.
+#### 1.2 The README indicates the new features you added to the game.
+Yes, it is.
+#### 1.3 The README includes information about each rubric point addressed.
+Yes, it is.
+### 2. Compiling and Testing (All Rubric Points REQUIRED)
+#### 2.1 The submission must compile and run without errors on the Udacity project workspace.
+Yes, it is.
+### 3. Loops, Functions, I/O - meet at least 2 criteria
+#### 3.1 The project demonstrates an understanding of C++ functions and control structures.
+Yes, it is.
+#### 3.2 The project reads data from a file and process the data, or the program writes data to a file.
+Yes, it is.
+#### 3.3 The project accepts user input and processes the input.
+Yes, it is.
+#### 3.4 The project uses data structures and immutable variables.
+Yes, it is.
+### 4. Object Oriented Programming - meet at least 3 criteria
+#### 4.1 One or more classes are added to the project with appropriate access specifiers for class members.
+Yes, it is.
+#### 4.2 Class constructors utilize member initialization lists.
+Yes, it is.
+#### 4.3 Classes abstract implementation details from their interfaces.
+Yes, it is.
+#### 4.4 Overloaded functions allow the same function to operate on different parameters.
+Yes, it is.
+#### 4.5 Classes follow an appropriate inheritance hierarchy with virtual and override functions.
+Yes, it is.
+#### 4.6 Templates generalize functions or classes in the project.
+Yes, it is.
+### 5. Memory Management - meet at least 3 criteria
+#### 5.1 The project makes use of references in function declarations.
+Yes, it is.
+#### 5.2 The project uses destructors appropriately.
+Yes, it is.
+#### 5.3 The project uses scope / Resource Acquisition Is Initialization (RAII) where appropriate.
+Yes, it is.
+#### 5.4 The project follows the Rule of 5.
+Yes, it is.
+#### 5.5 The project uses move semantics to move data instead of copying it, where possible.
+Yes, it is.
+#### 5.6 The project uses smart pointers instead of raw pointers.
+Yes, it is.
+### 6. Concurrency - meet at least 2 criteria
+#### 6.1 The project uses multithreading.
+Yes, it is.
+#### 6.2 A promise and future is used in the project.
+Yes, it is.
+#### 6.3 A mutex or lock is used in the project.
+Yes, it is.
+#### 6.4 A condition variable is used in the project.
+Yes, it is.
