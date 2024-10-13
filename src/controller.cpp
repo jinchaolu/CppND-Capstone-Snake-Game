@@ -9,7 +9,7 @@ void Controller::ChangeDirection(Snake &snake, Snake::Direction input,
   return;
 }
 
-void Controller::HandleInput(bool &running, Snake &snake) const {
+void Controller::HandleInput(bool &running, Snake &snake, Game &game) const {
   SDL_Event e;
   while (SDL_PollEvent(&e)) {
     if (e.type == SDL_QUIT) {
@@ -35,6 +35,18 @@ void Controller::HandleInput(bool &running, Snake &snake) const {
           ChangeDirection(snake, Snake::Direction::kRight,
                           Snake::Direction::kLeft);
           break;
+        case SDLK_SPACE:
+          // Toggle between pausing and resuming game
+          if (game.GetPause()) {
+            game.ResumeGame();
+          } else {
+            game.PauseGame();
+          }
+          break;
+        default: {
+          // Print key value for debug
+          // std::cout << "e.key.keysym.sym: " << e.key.keysym.sym << std::endl;
+        }
       }
     }
   }

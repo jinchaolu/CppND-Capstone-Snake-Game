@@ -45,6 +45,15 @@ This work is licensed under a
 [cc-by-sa-image]: https://licensebuttons.net/l/by-sa/4.0/88x31.png
 [cc-by-sa-shield]: https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg
 
+## (TODO)New Features
+### 1. Pause
+Game should be able to be paused and resumed by pressing `space` button.  
+### 2. (Proposed)Enter game time at the start of the game
+### 3. (Proposed)Display remaining time
+### 4. (Proposed)Display elapsed time
+### 5. (Proposed)Choose difficulty at the start of the game
+Player should be able to select difficulty at the start of the game.
+
 ## (TODO)Project Rubric  
 ### 1. README (All Rubric Points REQUIRED)
 #### 1.1 A README with instructions is included with the project
