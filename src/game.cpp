@@ -1,3 +1,7 @@
+#include <algorithm>
+#include <regex>
+#include <fstream>
+#include <string>
 #include "game.h"
 #include <iostream>
 #include "SDL.h"
@@ -30,6 +34,12 @@ void Game::Run(Controller const &controller, Renderer &renderer,
     }
     renderer.Render(snake, food);
 
+    // If snake died, check leaderboard and break loop
+    if (!snake.alive) {
+      CheckAndUpdateLeaderboard();
+      break;
+    }
+
     frame_end = SDL_GetTicks();
 
     // Keep track of how long each loop through the input/update/render cycle
@@ -51,6 +61,72 @@ void Game::Run(Controller const &controller, Renderer &renderer,
       SDL_Delay(target_frame_duration - frame_duration);
     }
   }
+}
+
+// --- Leaderboard Management ---
+void Game::LoadLeaderboard() {
+  leaderboard.clear();
+  std::ifstream file("data/Leaderboard.txt");
+  std::string line;
+  std::getline(file, line); // skip header
+  while (std::getline(file, line)) {
+    size_t p1 = line.find(',');
+    size_t p2 = line.find(',', p1+1);
+    size_t p3 = line.find(',', p2+1);
+    if (p1 == std::string::npos || p2 == std::string::npos || p3 == std::string::npos) continue;
+    LeaderboardEntry entry;
+    entry.name = line.substr(0, p1);
+    entry.score = std::stoi(line.substr(p1+1, p2-p1-1));
+    entry.date = line.substr(p2+1, p3-p2-1);
+    entry.time = line.substr(p3+1);
+    leaderboard.push_back(entry);
+  }
+}
+
+void Game::SaveLeaderboard() {
+  std::ofstream file("data/Leaderboard.txt");
+  file << "Name,Score,Date,Time\n";
+  for (const auto& entry : leaderboard) {
+    file << entry.name << "," << entry.score << "," << entry.date << "," << entry.time << "\n";
+  }
+}
+
+bool Game::IsTopScore(int s) {
+  if (leaderboard.size() < 10) return true;
+  for (const auto& entry : leaderboard) {
+    if (s > entry.score) return true;
+  }
+  return false;
+}
+
+std::string Game::PromptName() {
+  std::string name;
+  std::regex valid("^[A-Za-z0-9_]{1,8}$");
+  while (true) {
+    std::cout << "Congratulations! You made the top 10! Enter your name (max 8 chars, letters/numbers/_): ";
+    std::getline(std::cin, name);
+    if (std::regex_match(name, valid)) break;
+    std::cout << "Invalid name. Try again.\n";
+  }
+  return name;
+}
+
+void Game::CheckAndUpdateLeaderboard() {
+  LoadLeaderboard();
+  if (!IsTopScore(score)) return;
+  std::string name = PromptName();
+  // Get current date/time
+  std::time_t t = std::time(nullptr);
+  std::tm* now = std::localtime(&t);
+  char datebuf[11], timebuf[9];
+  std::strftime(datebuf, sizeof(datebuf), "%Y-%m-%d", now);
+  std::strftime(timebuf, sizeof(timebuf), "%H:%M:%S", now);
+  LeaderboardEntry newEntry{name, score, datebuf, timebuf};
+  leaderboard.push_back(newEntry);
+  std::sort(leaderboard.begin(), leaderboard.end(), [](const auto& a, const auto& b){ return a.score > b.score; });
+  if (leaderboard.size() > 10) leaderboard.resize(10);
+  SaveLeaderboard();
+  std::cout << "Leaderboard updated!\n";
 }
 
 void Game::PlaceFood() {

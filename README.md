@@ -69,11 +69,11 @@ Yes, it is.
 #### 3.1 The project demonstrates an understanding of C++ functions and control structures.
 Yes, it is.
 #### 3.2 The project reads data from a file and process the data, or the program writes data to a file.
-Yes, it is.
+Yes, it is. The game maintains a leaderboard in `data/Leaderboard.txt`, reading and writing the top 10 scores as a CSV file. When the game ends and the player's score is in the top 10, the leaderboard is updated and saved, always keeping the top 10 scores with date and time.
 #### 3.3 The project accepts user input and processes the input.
-Yes, it is.
+Yes, it is. When a new high score is achieved, the user is prompted to enter their name (max 8 chars, only letters, numbers, or underscore) for the leaderboard, with input validation.
 #### 3.4 The project uses data structures and immutable variables.
-Yes, it is.
+Yes, it is. The leaderboard is managed using a vector of structs, demonstrating the use of C++ STL containers and custom data types.
 ### 4. Object Oriented Programming - meet at least 3 criteria
 #### 4.1 One or more classes are added to the project with appropriate access specifiers for class members.
 Yes, it is.

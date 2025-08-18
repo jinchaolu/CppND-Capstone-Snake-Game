@@ -19,6 +19,18 @@ class Game {
   bool GetPause() const;
   void PauseGame();
   void ResumeGame();
+  struct LeaderboardEntry {
+    std::string name;
+    int score;
+    std::string date;
+    std::string time;
+  };
+  std::vector<LeaderboardEntry> leaderboard;
+  void LoadLeaderboard();
+  void SaveLeaderboard();
+  bool IsTopScore(int score);
+  std::string PromptName();
+  void CheckAndUpdateLeaderboard();
 
  private:
   Snake snake;
