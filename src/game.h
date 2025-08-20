@@ -11,6 +11,8 @@ class Controller; // Forward declaration
 
 class Game {
  public:
+  enum class GameState { Playing, GameOver };
+  void Reset();
   Game(std::size_t grid_width, std::size_t grid_height);
   void Run(Controller const &controller, Renderer &renderer,
            std::size_t target_frame_duration);
@@ -46,6 +48,7 @@ class Game {
   void PlaceFood();
   void Update();
   bool isPaused{false};
+  GameState state{GameState::Playing};
 };
 
 #endif

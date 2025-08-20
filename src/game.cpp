@@ -14,6 +14,14 @@ Game::Game(std::size_t grid_width, std::size_t grid_height)
   PlaceFood();
 }
 
+void Game::Reset() {
+  snake = Snake(random_w.max() + 1, random_h.max() + 1);
+  score = 0;
+  isPaused = false;
+  PlaceFood();
+  state = GameState::Playing;
+}
+
 void Game::Run(Controller const &controller, Renderer &renderer,
                std::size_t target_frame_duration) {
   Uint32 title_timestamp = SDL_GetTicks();
@@ -27,17 +35,28 @@ void Game::Run(Controller const &controller, Renderer &renderer,
     frame_start = SDL_GetTicks();
 
     // Input, Update, Render - the main game loop.
-    controller.HandleInput(running, snake, *this);
-    // Update snake if it is not paused
-    if (!isPaused) {
-      Update();
-    }
-    renderer.Render(snake, food);
+    if (state == GameState::Playing) {
+      controller.HandleInput(running, snake, *this);
+      if (!isPaused) {
+        Update();
+      }
+      renderer.Render(snake, food);
 
-    // If snake died, check leaderboard and break loop
-    if (!snake.alive) {
-      CheckAndUpdateLeaderboard();
-      break;
+      if (!snake.alive) {
+        state = GameState::GameOver;
+        CheckAndUpdateLeaderboard();
+        SDL_SetWindowTitle(SDL_GetWindowFromID(1), "Game Over! Press Enter to restart.");
+      }
+    } else if (state == GameState::GameOver) {
+      SDL_Event e;
+      while (SDL_PollEvent(&e)) {
+        if (e.type == SDL_QUIT) {
+          running = false;
+        } else if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_RETURN) {
+          Reset();
+        }
+      }
+      renderer.Render(snake, food);
     }
 
     frame_end = SDL_GetTicks();
