@@ -22,6 +22,56 @@ void Game::Reset() {
   state = GameState::Playing;
 }
 
+void Game::ShowMenu() {
+  std::cout << "\n=== Snake Game Menu ===\n";
+  std::cout << "1. New Game (Press N)\n";
+  std::cout << "2. Leaderboard (Press L)\n";
+  std::cout << "3. Exit (Press Q)\n";
+  SDL_SetWindowTitle(SDL_GetWindowFromID(1), "Snake Game - Menu (N: New Game, L: Leaderboard, Q: Exit)");
+}
+
+void Game::DisplayLeaderboard() {
+  LoadLeaderboard();
+  std::cout << "\n=== Leaderboard ===\n";
+  if (leaderboard.empty()) {
+    std::cout << "No scores yet!\n";
+  } else {
+    for (size_t i = 0; i < leaderboard.size(); ++i) {
+      std::cout << i+1 << ". " << leaderboard[i].name 
+                << " - Score: " << leaderboard[i].score 
+                << " (" << leaderboard[i].date << " " << leaderboard[i].time << ")\n";
+    }
+  }
+  std::cout << "\nPress M to return to menu\n";
+}
+
+void Game::HandleMenuInput() {
+  SDL_Event e;
+  while (SDL_PollEvent(&e)) {
+    if (e.type == SDL_QUIT) {
+      state = GameState::Menu;  // This will be checked in the main loop
+      return;
+    }
+    if (e.type == SDL_KEYDOWN) {
+      switch (e.key.keysym.sym) {
+        case SDLK_n:  // New Game
+          Reset();
+          state = GameState::Playing;
+          break;
+        case SDLK_l:  // Leaderboard
+          DisplayLeaderboard();
+          break;
+        case SDLK_q:  // Quit
+          state = GameState::Menu;  // This will be checked in the main loop
+          return;
+        case SDLK_m:  // Return to menu from leaderboard
+          ShowMenu();
+          break;
+      }
+    }
+  }
+}
+
 void Game::Run(Controller const &controller, Renderer &renderer,
                std::size_t target_frame_duration) {
   Uint32 title_timestamp = SDL_GetTicks();
@@ -30,12 +80,18 @@ void Game::Run(Controller const &controller, Renderer &renderer,
   Uint32 frame_duration;
   int frame_count = 0;
   bool running = true;
+  
+  ShowMenu();
 
   while (running) {
     frame_start = SDL_GetTicks();
 
-    // Input, Update, Render - the main game loop.
-    if (state == GameState::Playing) {
+    if (state == GameState::Menu) {
+      HandleMenuInput();
+      if (state == GameState::Menu) {  // If quit was selected
+        running = false;
+      }
+    } else if (state == GameState::Playing) {
       controller.HandleInput(running, snake, *this);
       if (!isPaused) {
         Update();
@@ -45,15 +101,20 @@ void Game::Run(Controller const &controller, Renderer &renderer,
       if (!snake.alive) {
         state = GameState::GameOver;
         CheckAndUpdateLeaderboard();
-        SDL_SetWindowTitle(SDL_GetWindowFromID(1), "Game Over! Press Enter to restart.");
+        SDL_SetWindowTitle(SDL_GetWindowFromID(1), "Game Over! Press Enter to restart, M for menu");
       }
     } else if (state == GameState::GameOver) {
       SDL_Event e;
       while (SDL_PollEvent(&e)) {
         if (e.type == SDL_QUIT) {
           running = false;
-        } else if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_RETURN) {
-          Reset();
+        } else if (e.type == SDL_KEYDOWN) {
+          if (e.key.keysym.sym == SDLK_RETURN) {
+            Reset();
+          } else if (e.key.keysym.sym == SDLK_m) {
+            state = GameState::Menu;
+            ShowMenu();
+          }
         }
       }
       renderer.Render(snake, food);

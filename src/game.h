@@ -11,8 +11,10 @@ class Controller; // Forward declaration
 
 class Game {
  public:
-  enum class GameState { Playing, GameOver };
+  enum class GameState { Menu, Playing, GameOver };
   void Reset();
+  void ShowMenu();
+  void DisplayLeaderboard();
   Game(std::size_t grid_width, std::size_t grid_height);
   void Run(Controller const &controller, Renderer &renderer,
            std::size_t target_frame_duration);
@@ -48,7 +50,8 @@ class Game {
   void PlaceFood();
   void Update();
   bool isPaused{false};
-  GameState state{GameState::Playing};
+  GameState state{GameState::Menu};
+  void HandleMenuInput();
 };
 
 #endif
