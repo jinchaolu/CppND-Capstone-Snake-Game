@@ -10,7 +10,8 @@ Game::Game(std::size_t grid_width, std::size_t grid_height)
     : snake(grid_width, grid_height),
       engine(dev()),
       random_w(0, static_cast<int>(grid_width - 1)),
-      random_h(0, static_cast<int>(grid_height - 1)) {
+      random_h(0, static_cast<int>(grid_height - 1)),
+      state(GameState::Menu) {
   PlaceFood();
 }
 
@@ -47,7 +48,8 @@ void Game::DisplayLeaderboard() {
 
 void Game::HandleMenuInput() {
   SDL_Event e;
-  while (SDL_PollEvent(&e)) {
+  bool choice_made = false;
+  while (!choice_made && SDL_WaitEvent(&e)) {
     if (e.type == SDL_QUIT) {
       state = GameState::Menu;  // This will be checked in the main loop
       return;
@@ -57,12 +59,14 @@ void Game::HandleMenuInput() {
         case SDLK_n:  // New Game
           Reset();
           state = GameState::Playing;
+          choice_made = true;
           break;
         case SDLK_l:  // Leaderboard
           DisplayLeaderboard();
           break;
         case SDLK_q:  // Quit
           state = GameState::Menu;  // This will be checked in the main loop
+          choice_made = true;
           return;
         case SDLK_m:  // Return to menu from leaderboard
           ShowMenu();
