@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 #include <sys/stat.h>
+#include <unistd.h>
 #include "game.h"
 #include <iostream>
 #include "SDL.h"
@@ -151,22 +152,49 @@ void Game::Run(Controller const &controller, Renderer &renderer,
 // --- Leaderboard Management ---
 void Game::LoadLeaderboard() {
   leaderboard.clear();
+  
   mkdir("data", 0777);  // Create data directory if it doesn't exist, with full permissions
+  
+  // Try to open the leaderboard file
   std::ifstream file("data/Leaderboard.txt");
-  if (!file.is_open()) return;  // Return with empty leaderboard if file doesn't exist
+  if (!file.is_open()) {
+    // If file doesn't exist, create it with default entries
+    std::ofstream newFile("data/Leaderboard.txt");
+    if (newFile.is_open()) {
+      newFile << "Name,Score,Date,Time\n";
+      // Add 10 default entries
+      for (int i = 1; i <= 10; i++) {
+        newFile << "player" << i << ",0,2025-01-01,00:00:00\n";
+      }
+      newFile.close();
+      // Reopen file for reading
+      file.open("data/Leaderboard.txt");
+    }
+  }
+  
+  if (!file.is_open()) {
+    std::cerr << "Failed to open or create leaderboard file\n";
+    return;
+  }
+  
   std::string line;
   std::getline(file, line); // skip header
+  std::cout << "Header line: " << line << "\n";
   while (std::getline(file, line)) {
     size_t p1 = line.find(',');
     size_t p2 = line.find(',', p1+1);
     size_t p3 = line.find(',', p2+1);
-    if (p1 == std::string::npos || p2 == std::string::npos || p3 == std::string::npos) continue;
+    if (p1 == std::string::npos || p2 == std::string::npos || p3 == std::string::npos) {
+      std::cerr << "Invalid line format: " << line << "\n";
+      continue;
+    }
     LeaderboardEntry entry;
     entry.name = line.substr(0, p1);
     entry.score = std::stoi(line.substr(p1+1, p2-p1-1));
     entry.date = line.substr(p2+1, p3-p2-1);
     entry.time = line.substr(p3+1);
     leaderboard.push_back(entry);
+    std::cout << "Added entry: " << entry.name << " - Score: " << entry.score << "\n";
   }
 }
 
@@ -175,7 +203,13 @@ void Game::SaveLeaderboard() {
   std::ofstream file("data/Leaderboard.txt");
   if (!file.is_open()) {
     std::cerr << "Error: Could not open leaderboard file for writing\n";
-    return;
+    // Try to ensure the directory exists
+    system("mkdir -p data");
+    file.open("data/Leaderboard.txt");
+    if (!file.is_open()) {
+      std::cerr << "Error: Still could not open leaderboard file after creating directory\n";
+      return;
+    }
   }
   file << "Name,Score,Date,Time\n";
   for (const auto& entry : leaderboard) {
