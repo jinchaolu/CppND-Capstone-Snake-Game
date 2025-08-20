@@ -2,6 +2,7 @@
 #include <regex>
 #include <fstream>
 #include <string>
+#include <filesystem>
 #include "game.h"
 #include <iostream>
 #include "SDL.h"
@@ -150,7 +151,9 @@ void Game::Run(Controller const &controller, Renderer &renderer,
 // --- Leaderboard Management ---
 void Game::LoadLeaderboard() {
   leaderboard.clear();
+  std::filesystem::create_directories("data");  // Create data directory if it doesn't exist
   std::ifstream file("data/Leaderboard.txt");
+  if (!file.is_open()) return;  // Return with empty leaderboard if file doesn't exist
   std::string line;
   std::getline(file, line); // skip header
   while (std::getline(file, line)) {
@@ -168,7 +171,12 @@ void Game::LoadLeaderboard() {
 }
 
 void Game::SaveLeaderboard() {
+  std::filesystem::create_directories("data");  // Create data directory if it doesn't exist
   std::ofstream file("data/Leaderboard.txt");
+  if (!file.is_open()) {
+    std::cerr << "Error: Could not open leaderboard file for writing\n";
+    return;
+  }
   file << "Name,Score,Date,Time\n";
   for (const auto& entry : leaderboard) {
     file << entry.name << "," << entry.score << "," << entry.date << "," << entry.time << "\n";
