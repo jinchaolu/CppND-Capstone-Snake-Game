@@ -53,6 +53,7 @@ class Game {
   void Update();
   bool isPaused{false};
   GameState state{GameState::Menu};
+  Renderer* renderer{nullptr};
   void HandleMenuInput();
 };
 

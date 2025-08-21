@@ -21,10 +21,25 @@ Renderer::Renderer(const std::size_t screen_width,
     std::cerr << "SDL_ttf Error: " << TTF_GetError() << "\n";
   }
 
-  // Load font
-  font = TTF_OpenFont("/System/Library/Fonts/Helvetica.ttc", 24);
+  // Try to load font from common Linux paths
+  const char* fontPaths[] = {
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",    // Debian/Ubuntu
+    "/usr/share/fonts/TTF/DejaVuSans.ttf",                // Arch Linux
+    "/usr/share/fonts/dejavu/DejaVuSans.ttf",             // Fedora
+    "DejaVuSans.ttf"                                       // Current directory
+  };
+
+  font = nullptr;
+  for (const char* path : fontPaths) {
+    font = TTF_OpenFont(path, 24);
+    if (font != nullptr) break;
+  }
+
   if (font == nullptr) {
-    std::cerr << "Failed to load font.\n";
+    std::cerr << "Failed to load any font. Tried:\n";
+    for (const char* path : fontPaths) {
+      std::cerr << "- " << path << "\n";
+    }
     std::cerr << "SDL_ttf Error: " << TTF_GetError() << "\n";
   }
 
@@ -54,6 +69,11 @@ Renderer::~Renderer() {
 }
 
 void Renderer::RenderText(const std::string &text, int x, int y, SDL_Color color) {
+  if (font == nullptr) {
+    std::cerr << "Cannot render text: font not loaded\n";
+    return;
+  }
+  
   SDL_Surface* surface = TTF_RenderText_Solid(font, text.c_str(), color);
   if (surface == nullptr) {
     std::cerr << "Unable to render text surface! SDL_ttf Error: " << TTF_GetError() << "\n";
