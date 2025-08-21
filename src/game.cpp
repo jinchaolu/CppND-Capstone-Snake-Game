@@ -13,7 +13,8 @@ Game::Game(std::size_t grid_width, std::size_t grid_height)
       engine(dev()),
       random_w(0, static_cast<int>(grid_width - 1)),
       random_h(0, static_cast<int>(grid_height - 1)),
-      state(GameState::Menu) {
+      state(GameState::Menu),
+      renderer(nullptr) {
   PlaceFood();
 }
 
@@ -30,7 +31,15 @@ void Game::ShowMenu() {
   std::cout << "1. New Game (Press N)\n";
   std::cout << "2. Leaderboard (Press L)\n";
   std::cout << "3. Exit (Press Q)\n";
-  SDL_SetWindowTitle(SDL_GetWindowFromID(1), "Snake Game - Menu (N: New Game, L: Leaderboard, Q: Exit)");
+  
+  std::vector<std::string> menu_items = {
+    "1. New Game (Press N)",
+    "2. Leaderboard (Press L)",
+    "3. Exit (Press Q)"
+  };
+  
+  SDL_SetWindowTitle(SDL_GetWindowFromID(1), "Snake Game - Menu");
+  renderer->RenderMenu(menu_items);
 }
 
 void Game::DisplayLeaderboard() {

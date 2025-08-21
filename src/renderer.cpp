@@ -15,6 +15,19 @@ Renderer::Renderer(const std::size_t screen_width,
     std::cerr << "SDL_Error: " << SDL_GetError() << "\n";
   }
 
+  // Initialize SDL_ttf
+  if (TTF_Init() == -1) {
+    std::cerr << "SDL_ttf could not initialize.\n";
+    std::cerr << "SDL_ttf Error: " << TTF_GetError() << "\n";
+  }
+
+  // Load font
+  font = TTF_OpenFont("/System/Library/Fonts/Helvetica.ttc", 24);
+  if (font == nullptr) {
+    std::cerr << "Failed to load font.\n";
+    std::cerr << "SDL_ttf Error: " << TTF_GetError() << "\n";
+  }
+
   // Create Window
   sdl_window = SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_CENTERED,
                                 SDL_WINDOWPOS_CENTERED, screen_width,
@@ -34,8 +47,51 @@ Renderer::Renderer(const std::size_t screen_width,
 }
 
 Renderer::~Renderer() {
+  TTF_CloseFont(font);
+  TTF_Quit();
   SDL_DestroyWindow(sdl_window);
   SDL_Quit();
+}
+
+void Renderer::RenderText(const std::string &text, int x, int y, SDL_Color color) {
+  SDL_Surface* surface = TTF_RenderText_Solid(font, text.c_str(), color);
+  if (surface == nullptr) {
+    std::cerr << "Unable to render text surface! SDL_ttf Error: " << TTF_GetError() << "\n";
+    return;
+  }
+
+  SDL_Texture* texture = SDL_CreateTextureFromSurface(sdl_renderer, surface);
+  if (texture == nullptr) {
+    std::cerr << "Unable to create texture from rendered text! SDL Error: " << SDL_GetError() << "\n";
+    SDL_FreeSurface(surface);
+    return;
+  }
+
+  SDL_Rect renderQuad = {x, y, surface->w, surface->h};
+  SDL_RenderCopy(sdl_renderer, texture, NULL, &renderQuad);
+
+  SDL_FreeSurface(surface);
+  SDL_DestroyTexture(texture);
+}
+
+void Renderer::RenderMenu(const std::vector<std::string> &menu_items) {
+  SDL_SetRenderDrawColor(sdl_renderer, 0x1E, 0x1E, 0x1E, 0xFF);
+  SDL_RenderClear(sdl_renderer);
+
+  SDL_Color textColor = {255, 255, 255, 255};  // White
+  int y_pos = 100;
+
+  // Render title
+  RenderText("=== Snake Game Menu ===", screen_width/4, y_pos, textColor);
+  y_pos += 50;
+
+  // Render menu items
+  for (const auto &item : menu_items) {
+    RenderText(item, screen_width/4, y_pos, textColor);
+    y_pos += 40;
+  }
+
+  SDL_RenderPresent(sdl_renderer);
 }
 
 void Renderer::Render(Snake const snake, SDL_Point const &food) {

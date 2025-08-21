@@ -23,6 +23,8 @@ class Game {
   bool GetPause() const;
   void PauseGame();
   void ResumeGame();
+  void SetRenderer(Renderer* r) { renderer = r; }
+
   struct LeaderboardEntry {
     std::string name;
     int score;
