@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "game.h"
+#include "state.h"
 #include <iostream>
 #include "SDL.h"
 
@@ -12,10 +13,10 @@ Game::Game(std::size_t grid_width, std::size_t grid_height)
     : snake(grid_width, grid_height),
       engine(dev()),
       random_w(0, static_cast<int>(grid_width - 1)),
-      random_h(0, static_cast<int>(grid_height - 1)),
-      state(GameState::Menu),
-      renderer(nullptr) {
+      random_h(0, static_cast<int>(grid_height - 1)) {
   PlaceFood();
+  // Start with Menu state
+  currentState = std::make_unique<MenuState>();
 }
 
 void Game::Reset() {
@@ -94,64 +95,25 @@ void Game::Run(Controller const &controller, Renderer &renderer,
   Uint32 frame_end;
   Uint32 frame_duration;
   int frame_count = 0;
-  bool running = true;
-  
-  ShowMenu();
 
-  while (running) {
+  while (snake.alive) {
     frame_start = SDL_GetTicks();
 
-    if (state == GameState::Menu) {
-      HandleMenuInput();
-      if (state == GameState::Menu) {  // If quit was selected
-        running = false;
-      }
-    } else if (state == GameState::Playing) {
-      controller.HandleInput(running, snake, *this);
-      if (!isPaused) {
-        Update();
-      }
-      renderer.Render(snake, food);
-
-      if (!snake.alive) {
-        state = GameState::GameOver;
-        CheckAndUpdateLeaderboard();
-        SDL_SetWindowTitle(SDL_GetWindowFromID(1), "Game Over! Press Enter to restart, M for menu");
-      }
-    } else if (state == GameState::GameOver) {
-      SDL_Event e;
-      while (SDL_PollEvent(&e)) {
-        if (e.type == SDL_QUIT) {
-          running = false;
-        } else if (e.type == SDL_KEYDOWN) {
-          if (e.key.keysym.sym == SDLK_RETURN) {
-            Reset();
-          } else if (e.key.keysym.sym == SDLK_m) {
-            state = GameState::Menu;
-            ShowMenu();
-          }
-        }
-      }
-      renderer.Render(snake, food);
-    }
+    // Handle input, update and render through current state
+    currentState->HandleInput(*this, controller);
+    currentState->Update(*this);
+    currentState->Render(*this, renderer);
 
     frame_end = SDL_GetTicks();
-
-    // Keep track of how long each loop through the input/update/render cycle
-    // takes.
     frame_count++;
     frame_duration = frame_end - frame_start;
 
-    // After every second, update the window title.
     if (frame_end - title_timestamp >= 1000) {
-      renderer.UpdateWindowTitle(score, frame_count, isPaused);
+      renderer.UpdateWindowTitle(score, frame_count);
       frame_count = 0;
       title_timestamp = frame_end;
     }
 
-    // If the time for this frame is too small (i.e. frame_duration is
-    // smaller than the target ms_per_frame), delay the loop to
-    // achieve the correct frame rate.
     if (frame_duration < target_frame_duration) {
       SDL_Delay(target_frame_duration - frame_duration);
     }

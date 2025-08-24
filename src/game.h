@@ -2,28 +2,34 @@
 #define GAME_H
 
 #include <random>
+#include <memory>
 #include "SDL.h"
 #include "controller.h"
 #include "renderer.h"
 #include "snake.h"
 
-class Controller; // Forward declaration
+class Controller;
+class State;  // Forward declaration for the new State base class
 
 class Game {
  public:
-  enum class GameState { Menu, Playing, GameOver };
-  void Reset();
-  void ShowMenu();
-  void DisplayLeaderboard();
   Game(std::size_t grid_width, std::size_t grid_height);
   void Run(Controller const &controller, Renderer &renderer,
            std::size_t target_frame_duration);
-  int GetScore() const;
-  int GetSize() const;
-  bool GetPause() const;
-  void PauseGame();
-  void ResumeGame();
+  
+  // Existing methods
+  void Reset();
+  int GetScore() const { return score; }
+  int GetSize() const { return snake.size; }
+  bool GetPause() const { return isPaused; }
+  void PauseGame() { isPaused = true; }
+  void ResumeGame() { isPaused = false; }
   void SetRenderer(Renderer* r) { renderer = r; }
+
+  // Make these public so states can access them
+  Snake& GetSnake() { return snake; }
+  SDL_Point& GetFood() { return food; }
+  void PlaceFood();
 
   struct LeaderboardEntry {
     std::string name;
@@ -37,10 +43,14 @@ class Game {
   bool IsTopScore(int score);
   std::string PromptName();
   void CheckAndUpdateLeaderboard();
+  
+  // New method for state management
+  void ChangeState(std::unique_ptr<State> newState);
 
  private:
   Snake snake;
   SDL_Point food;
+  std::unique_ptr<State> currentState;  // New member for current state
 
   std::random_device dev;
   std::mt19937 engine;
@@ -48,13 +58,8 @@ class Game {
   std::uniform_int_distribution<int> random_h;
 
   int score{0};
-
-  void PlaceFood();
-  void Update();
   bool isPaused{false};
-  GameState state{GameState::Menu};
   Renderer* renderer{nullptr};
-  void HandleMenuInput();
 };
 
 #endif
