@@ -24,7 +24,7 @@ void Game::Reset() {
   score = 0;
   isPaused = false;
   PlaceFood();
-  state = GameState::Playing;
+  currentState = std::make_unique<PlayingState>();
 }
 
 void Game::ShowMenu() {

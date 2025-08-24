@@ -8,7 +8,7 @@ class Game; // Forward declaration
 
 class Controller {
  public:
-  void HandleInput(bool &running, Snake &snake, Game &game) const;
+  void HandleInput(bool &running, Snake &snake) const;
 
  private:
   void ChangeDirection(Snake &snake, Snake::Direction input,

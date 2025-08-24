@@ -7,9 +7,10 @@
 #include "controller.h"
 #include "renderer.h"
 #include "snake.h"
+#include "state.h"
 
 class Controller;
-class State;  // Forward declaration for the new State base class
+class State;
 
 class Game {
  public:
@@ -17,26 +18,24 @@ class Game {
   void Run(Controller const &controller, Renderer &renderer,
            std::size_t target_frame_duration);
   
-  // Existing methods
+  // State management
   void Reset();
+  void ChangeState(std::unique_ptr<State> newState);
+  
+  // Menu functions
+  void ShowMenu();
+  void HandleMenuInput();
+  void DisplayLeaderboard();
+  
+  // Game state access
   int GetScore() const { return score; }
   int GetSize() const { return snake.size; }
   bool GetPause() const { return isPaused; }
   void PauseGame() { isPaused = true; }
   void ResumeGame() { isPaused = false; }
-  void SetRenderer(Renderer* r) { renderer = r; }
-
-  // Make these public so states can access them
-  Snake& GetSnake() { return snake; }
-  SDL_Point& GetFood() { return food; }
-  void PlaceFood();
-
-  struct LeaderboardEntry {
-    std::string name;
-    int score;
-    std::string date;
-    std::string time;
-  };
+  void Update();
+  
+  // Leaderboard management
   std::vector<LeaderboardEntry> leaderboard;
   void LoadLeaderboard();
   void SaveLeaderboard();
@@ -44,14 +43,15 @@ class Game {
   std::string PromptName();
   void CheckAndUpdateLeaderboard();
   
-  // New method for state management
-  void ChangeState(std::unique_ptr<State> newState);
+  // Getters for state pattern
+  Snake& GetSnake() { return snake; }
+  SDL_Point& GetFood() { return food; }
+  void PlaceFood();
 
  private:
   Snake snake;
   SDL_Point food;
-  std::unique_ptr<State> currentState;  // New member for current state
-
+  std::unique_ptr<State> currentState;
   std::random_device dev;
   std::mt19937 engine;
   std::uniform_int_distribution<int> random_w;

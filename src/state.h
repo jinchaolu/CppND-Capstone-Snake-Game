@@ -2,9 +2,8 @@
 #define STATE_H
 
 #include "renderer.h"
-#include "controller.h"
-
-class Game;  // Forward declaration
+class Game;
+class Controller;
 
 class State {
  public:
