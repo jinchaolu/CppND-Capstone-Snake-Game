@@ -4,7 +4,7 @@
 #include "snake.h"
 #include "game.h"
 
-class Game; // Forward declaration
+class Game;
 
 class Controller {
  public:

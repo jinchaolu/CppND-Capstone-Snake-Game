@@ -38,52 +38,6 @@ Renderer::~Renderer() {
   SDL_Quit();
 }
 
-void Renderer::RenderText(const std::string &text, int x, int y, SDL_Color color) {
-  if (font == nullptr) {
-    std::cerr << "Cannot render text: font not loaded\n";
-    return;
-  }
-  
-  SDL_Surface* surface = TTF_RenderText_Solid(font, text.c_str(), color);
-  if (surface == nullptr) {
-    std::cerr << "Unable to render text surface! SDL_ttf Error: " << TTF_GetError() << "\n";
-    return;
-  }
-
-  SDL_Texture* texture = SDL_CreateTextureFromSurface(sdl_renderer, surface);
-  if (texture == nullptr) {
-    std::cerr << "Unable to create texture from rendered text! SDL Error: " << SDL_GetError() << "\n";
-    SDL_FreeSurface(surface);
-    return;
-  }
-
-  SDL_Rect renderQuad = {x, y, surface->w, surface->h};
-  SDL_RenderCopy(sdl_renderer, texture, NULL, &renderQuad);
-
-  SDL_FreeSurface(surface);
-  SDL_DestroyTexture(texture);
-}
-
-void Renderer::RenderMenu(const std::vector<std::string> &menu_items) {
-  SDL_SetRenderDrawColor(sdl_renderer, 0x1E, 0x1E, 0x1E, 0xFF);
-  SDL_RenderClear(sdl_renderer);
-
-  SDL_Color textColor = {255, 255, 255, 255};  // White
-  int y_pos = 100;
-
-  // Render title
-  RenderText("=== Snake Game Menu ===", screen_width/4, y_pos, textColor);
-  y_pos += 50;
-
-  // Render menu items
-  for (const auto &item : menu_items) {
-    RenderText(item, screen_width/4, y_pos, textColor);
-    y_pos += 40;
-  }
-
-  SDL_RenderPresent(sdl_renderer);
-}
-
 void Renderer::Render(Snake const snake, SDL_Point const &food) {
   SDL_Rect block;
   block.w = screen_width / grid_width;
@@ -121,11 +75,7 @@ void Renderer::Render(Snake const snake, SDL_Point const &food) {
   SDL_RenderPresent(sdl_renderer);
 }
 
-void Renderer::UpdateWindowTitle(int score, int fps, bool isPaused) {
+void Renderer::UpdateWindowTitle(int score, int fps) {
   std::string title{"Snake Score: " + std::to_string(score) + " FPS: " + std::to_string(fps)};
-  // Add message to tell the user game is paused
-  if (isPaused) {
-    title += " (Paused)";
-  }
   SDL_SetWindowTitle(sdl_window, title.c_str());
 }

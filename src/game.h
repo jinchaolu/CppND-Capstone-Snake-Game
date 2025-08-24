@@ -3,6 +3,7 @@
 
 #include <random>
 #include <memory>
+#include <vector>
 #include "SDL.h"
 #include "controller.h"
 #include "renderer.h"
@@ -14,6 +15,13 @@ class State;
 
 class Game {
  public:
+  struct LeaderboardEntry {
+    std::string name;
+    int score;
+    std::string date;
+    std::string time;
+  };
+
   Game(std::size_t grid_width, std::size_t grid_height);
   void Run(Controller const &controller, Renderer &renderer,
            std::size_t target_frame_duration);
@@ -26,14 +34,17 @@ class Game {
   void ShowMenu();
   void HandleMenuInput();
   void DisplayLeaderboard();
+  void Update();
   
-  // Game state access
+  // Getters/Setters
   int GetScore() const { return score; }
   int GetSize() const { return snake.size; }
   bool GetPause() const { return isPaused; }
   void PauseGame() { isPaused = true; }
   void ResumeGame() { isPaused = false; }
-  void Update();
+  Snake& GetSnake() { return snake; }
+  SDL_Point& GetFood() { return food; }
+  void SetRenderer(Renderer* r) { renderer = r; }
   
   // Leaderboard management
   std::vector<LeaderboardEntry> leaderboard;
@@ -42,10 +53,6 @@ class Game {
   bool IsTopScore(int score);
   std::string PromptName();
   void CheckAndUpdateLeaderboard();
-  
-  // Getters for state pattern
-  Snake& GetSnake() { return snake; }
-  SDL_Point& GetFood() { return food; }
   void PlaceFood();
 
  private:

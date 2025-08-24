@@ -1,13 +1,14 @@
+#include "game.h"
+#include "state.h"
 #include <algorithm>
-#include <regex>
+#include <chrono>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <regex>
 #include <string>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "game.h"
-#include "state.h"
-#include <iostream>
-#include "SDL.h"
 
 Game::Game(std::size_t grid_width, std::size_t grid_height)
     : snake(grid_width, grid_height),
@@ -33,14 +34,10 @@ void Game::ShowMenu() {
   std::cout << "2. Leaderboard (Press L)\n";
   std::cout << "3. Exit (Press Q)\n";
   
-  std::vector<std::string> menu_items = {
-    "1. New Game (Press N)",
-    "2. Leaderboard (Press L)",
-    "3. Exit (Press Q)"
-  };
-  
-  SDL_SetWindowTitle(SDL_GetWindowFromID(1), "Snake Game - Menu");
-  renderer->RenderMenu(menu_items);
+  // Set window title for menu state
+  if (renderer) {
+    SDL_SetWindowTitle(SDL_GetWindowFromID(1), "Snake Game - Press N:New Game, L:Leaderboard, Q:Quit");
+  }
 }
 
 void Game::DisplayLeaderboard() {
@@ -63,21 +60,21 @@ void Game::HandleMenuInput() {
   bool choice_made = false;
   while (!choice_made && SDL_WaitEvent(&e)) {
     if (e.type == SDL_QUIT) {
-      state = GameState::Menu;  // This will be checked in the main loop
+      snake.alive = false;  // This will exit the game
       return;
     }
     if (e.type == SDL_KEYDOWN) {
       switch (e.key.keysym.sym) {
         case SDLK_n:  // New Game
           Reset();
-          state = GameState::Playing;
+          currentState = std::make_unique<PlayingState>();
           choice_made = true;
           break;
         case SDLK_l:  // Leaderboard
           DisplayLeaderboard();
           break;
         case SDLK_q:  // Quit
-          state = GameState::Menu;  // This will be checked in the main loop
+          snake.alive = false;
           choice_made = true;
           return;
         case SDLK_m:  // Return to menu from leaderboard
@@ -259,8 +256,6 @@ void Game::Update() {
   }
 }
 
-int Game::GetScore() const { return score; }
-int Game::GetSize() const { return snake.size; }
-bool Game::GetPause() const { return isPaused; }
-void Game::PauseGame() { isPaused = true; }
-void Game::ResumeGame() { isPaused = false; }
+void Game::ChangeState(std::unique_ptr<State> newState) {
+  currentState = std::move(newState);
+}
