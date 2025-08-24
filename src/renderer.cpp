@@ -15,38 +15,10 @@ Renderer::Renderer(const std::size_t screen_width,
     std::cerr << "SDL_Error: " << SDL_GetError() << "\n";
   }
 
-  // Initialize SDL_ttf
-  if (TTF_Init() == -1) {
-    std::cerr << "SDL_ttf could not initialize.\n";
-    std::cerr << "SDL_ttf Error: " << TTF_GetError() << "\n";
-  }
-
-  // Try to load font from common Linux paths
-  const char* fontPaths[] = {
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",    // Debian/Ubuntu
-    "/usr/share/fonts/TTF/DejaVuSans.ttf",                // Arch Linux
-    "/usr/share/fonts/dejavu/DejaVuSans.ttf",             // Fedora
-    "DejaVuSans.ttf"                                       // Current directory
-  };
-
-  font = nullptr;
-  for (const char* path : fontPaths) {
-    font = TTF_OpenFont(path, 24);
-    if (font != nullptr) break;
-  }
-
-  if (font == nullptr) {
-    std::cerr << "Failed to load any font. Tried:\n";
-    for (const char* path : fontPaths) {
-      std::cerr << "- " << path << "\n";
-    }
-    std::cerr << "SDL_ttf Error: " << TTF_GetError() << "\n";
-  }
-
   // Create Window
   sdl_window = SDL_CreateWindow("Snake Game", SDL_WINDOWPOS_CENTERED,
-                                SDL_WINDOWPOS_CENTERED, screen_width,
-                                screen_height, SDL_WINDOW_SHOWN);
+                               SDL_WINDOWPOS_CENTERED, screen_width,
+                               screen_height, SDL_WINDOW_SHOWN);
 
   if (nullptr == sdl_window) {
     std::cerr << "Window could not be created.\n";
@@ -62,8 +34,6 @@ Renderer::Renderer(const std::size_t screen_width,
 }
 
 Renderer::~Renderer() {
-  TTF_CloseFont(font);
-  TTF_Quit();
   SDL_DestroyWindow(sdl_window);
   SDL_Quit();
 }
