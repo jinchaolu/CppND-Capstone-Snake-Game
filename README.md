@@ -76,15 +76,24 @@ Yes, it is. When a new high score is achieved, the user is prompted to enter the
 Yes, it is. The leaderboard is managed using a vector of structs, demonstrating the use of C++ STL containers and custom data types.
 ### 4. Object Oriented Programming - meet at least 3 criteria
 #### 4.1 One or more classes are added to the project with appropriate access specifiers for class members.
-Yes, it is.
+Yes. Added State class hierarchy with PlayingState, MenuState, and GameOverState classes. Each class has appropriate public interfaces and protected/private implementation details.
+
 #### 4.2 Class constructors utilize member initialization lists.
-Yes, it is.
+Yes. State classes use initialization lists for member variables (e.g., `MenuState() : menuShown(false) {}` and `PlayingState() : lastPauseState(false) {}`).
+
 #### 4.3 Classes abstract implementation details from their interfaces.
-Yes, it is.
+Yes. The State pattern implementation hides game state management details behind clean interfaces. Each state handles its own rendering, input processing, and update logic while exposing only the necessary public methods (Update, Render, HandleInput).
+
 #### 4.4 Overloaded functions allow the same function to operate on different parameters.
 Yes, it is.
+
 #### 4.5 Classes follow an appropriate inheritance hierarchy with virtual and override functions.
-Yes, it is.
+Yes. Implemented State pattern using inheritance:
+- Abstract base class `State` with virtual functions
+- Derived classes (PlayingState, MenuState, GameOverState) that override these functions
+- Each state handles its specific behavior while maintaining a common interface
+- Virtual destructor ensures proper cleanup
+
 #### 4.6 Templates generalize functions or classes in the project.
 Yes, it is.
 ### 5. Memory Management - meet at least 3 criteria
