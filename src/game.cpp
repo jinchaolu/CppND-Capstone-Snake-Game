@@ -52,7 +52,7 @@ void Game::DisplayLeaderboard() {
                 << " (" << leaderboard[i].date << " " << leaderboard[i].time << ")\n";
     }
   }
-  std::cout << "\nPress M to return to menu\n";
+  std::cout << "\nPress any key to continue...\n";  // Updated message
 }
 
 void Game::HandleMenuInput() {
@@ -147,7 +147,6 @@ void Game::LoadLeaderboard() {
   
   std::string line;
   std::getline(file, line); // skip header
-  std::cout << "Header line: " << line << "\n";
   while (std::getline(file, line)) {
     size_t p1 = line.find(',');
     size_t p2 = line.find(',', p1+1);
@@ -162,7 +161,6 @@ void Game::LoadLeaderboard() {
     entry.date = line.substr(p2+1, p3-p2-1);
     entry.time = line.substr(p3+1);
     leaderboard.push_back(entry);
-    std::cout << "Added entry: " << entry.name << " - Score: " << entry.score << "\n";
   }
 }
 

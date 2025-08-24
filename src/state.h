@@ -15,16 +15,22 @@ class State {
 
 class PlayingState : public State {
  public:
+  PlayingState() : lastPauseState(false) {}
   void Update(Game& game) override;
   void Render(Game& game, Renderer& renderer) override;
   void HandleInput(Game& game, Controller const& controller) override;
+ private:
+  bool lastPauseState;
 };
 
 class MenuState : public State {
  public:
+  MenuState() : menuShown(false) {}
   void Update(Game& game) override;
   void Render(Game& game, Renderer& renderer) override;
   void HandleInput(Game& game, Controller const& controller) override;
+ private:
+  bool menuShown;
 };
 
 class GameOverState : public State {
