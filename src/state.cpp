@@ -6,6 +6,13 @@ void PlayingState::HandleInput(Game& game, Controller const& controller) {
     bool running = !game.GetPause();
     controller.HandleInput(running, game.GetSnake(), game);
     
+    // Check if snake was killed (quit command)
+    if (!game.GetSnake().alive) {
+        // Notify condition variable to wake up waiting threads
+        game.ResumeGame(); // This will wake up the Update thread
+        return;
+    }
+    
     // Only handle state changes
     if (!running && !lastPauseState) {  // Transitioning to pause
         game.PauseGame();

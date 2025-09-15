@@ -22,6 +22,8 @@ Game::Game(std::size_t grid_width, std::size_t grid_height)
 }
 
 Game::~Game() {
+  snake.alive = false;
+  pauseCV.notify_all();
   StopBackgroundTasks();
 }
 
@@ -44,6 +46,9 @@ void Game::StartBackgroundTasks() {
 void Game::StopBackgroundTasks() {
   shouldStop = true;
   
+  // Wake up any threads waiting on condition variable
+  pauseCV.notify_all();
+  
   // Stop food timer thread
   if (foodTimerThread.joinable()) {
     foodTimerThread.join();
@@ -53,9 +58,6 @@ void Game::StopBackgroundTasks() {
   if (leaderboardThread.joinable()) {
     leaderboardThread.join();
   }
-  
-  // Notify condition variable
-  pauseCV.notify_all();
 }
 
 void Game::FoodTimerTask() {
@@ -75,9 +77,6 @@ void Game::FoodTimerTask() {
 
 void Game::LoadLeaderboardAsync() {
   try {
-    // Simulate async leaderboard loading
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    
     std::lock_guard<std::mutex> lock(scoreMutex);
     LoadLeaderboard(); // Call existing method
     
@@ -134,10 +133,8 @@ void Game::InitializeDifficultyConfig() {
 }
 
 void Game::SetDifficulty(Difficulty diff) {
-  StopBackgroundTasks();
   currentDifficulty = diff;
   InitializeDifficultyConfig();
-  StartBackgroundTasks();
 }
 
 void Game::ShowMenu() {
@@ -366,9 +363,9 @@ void Game::Update() {
   
   // Use condition variable for pause handling
   std::unique_lock<std::mutex> pauseLock(pauseMutex);
-  pauseCV.wait(pauseLock, [this] { return !isPaused || shouldStop; });
+  pauseCV.wait(pauseLock, [this] { return !isPaused || shouldStop || !snake.alive; });
   
-  if (shouldStop) return;
+  if (shouldStop || !snake.alive) return;
 
   snake.Update();
 
@@ -377,7 +374,7 @@ void Game::Update() {
 
   // Check if there's food
   if (food.x == new_x && food.y == new_y) {
-    UpdateScoreThreadSafe(diffConfig.scorePerFood); // Thread-safe score update
+    UpdateScoreThreadSafe(diffConfig.scorePerFood);
     
     // Call GrowBody() multiple times based on difficulty
     for (int i = 0; i < diffConfig.growthRate; i++) {
@@ -386,7 +383,7 @@ void Game::Update() {
     
     snake.speed += diffConfig.speedIncrease;
     PlaceFood();
-    foodExpired = false; // Reset food timer
+    foodExpired = false;
   }
   
   // Check if food expired (for advanced difficulties)
