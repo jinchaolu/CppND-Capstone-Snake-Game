@@ -18,6 +18,101 @@ Game::Game(std::size_t grid_width, std::size_t grid_height)
   PlaceFood();
   InitializeDifficultyConfig();
   currentState = std::make_unique<MenuState>();
+  StartBackgroundTasks();
+}
+
+Game::~Game() {
+  StopBackgroundTasks();
+}
+
+void Game::StartBackgroundTasks() {
+  shouldStop = false;
+  
+  // Create new promise/future pair each time
+  leaderboardPromise = std::promise<bool>();
+  leaderboardFuture = leaderboardPromise.get_future();
+  
+  // Start food timer thread for advanced difficulties
+  if (diffConfig.hasFoodTimer) {
+    foodTimerThread = std::thread(&Game::FoodTimerTask, this);
+  }
+  
+  // Start leaderboard loading thread
+  leaderboardThread = std::thread(&Game::LoadLeaderboardAsync, this);
+}
+
+void Game::StopBackgroundTasks() {
+  shouldStop = true;
+  
+  // Stop food timer thread
+  if (foodTimerThread.joinable()) {
+    foodTimerThread.join();
+  }
+  
+  // Stop leaderboard thread
+  if (leaderboardThread.joinable()) {
+    leaderboardThread.join();
+  }
+  
+  // Notify condition variable
+  pauseCV.notify_all();
+}
+
+void Game::FoodTimerTask() {
+  while (!shouldStop) {
+    if (diffConfig.hasFoodTimer && !isPaused) {
+      std::this_thread::sleep_for(std::chrono::seconds(diffConfig.foodTimeLimit));
+      
+      if (!shouldStop && !isPaused) {
+        foodExpired = true;
+        PlaceFood(); // Place new food when timer expires
+      }
+    } else {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+  }
+}
+
+void Game::LoadLeaderboardAsync() {
+  try {
+    // Simulate async leaderboard loading
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    
+    std::lock_guard<std::mutex> lock(scoreMutex);
+    LoadLeaderboard(); // Call existing method
+    
+    // Only set value if promise is valid
+    try {
+      leaderboardPromise.set_value(true);
+    } catch (const std::future_error& e) {
+      // Promise already satisfied, ignore
+    }
+  } catch (...) {
+    try {
+      leaderboardPromise.set_value(false);
+    } catch (const std::future_error& e) {
+      // Promise already satisfied, ignore
+    }
+  }
+}
+
+void Game::WaitForLeaderboardLoad() {
+  // Wait for leaderboard to finish loading
+  if (leaderboardFuture.valid()) {
+    try {
+      bool success = leaderboardFuture.get();
+      if (!success) {
+        std::cerr << "Failed to load leaderboard asynchronously\n";
+      }
+    } catch (const std::future_error& e) {
+      std::cerr << "Future error: " << e.what() << "\n";
+    }
+  }
+}
+
+void Game::UpdateScoreThreadSafe(int points) {
+  std::lock_guard<std::mutex> lock(scoreMutex);
+  score += points;
 }
 
 void Game::InitializeDifficultyConfig() {
@@ -39,8 +134,10 @@ void Game::InitializeDifficultyConfig() {
 }
 
 void Game::SetDifficulty(Difficulty diff) {
-    currentDifficulty = diff;
-    InitializeDifficultyConfig();
+  StopBackgroundTasks();
+  currentDifficulty = diff;
+  InitializeDifficultyConfig();
+  StartBackgroundTasks();
 }
 
 void Game::ShowMenu() {
@@ -266,7 +363,12 @@ void Game::PlaceFood() {
 
 void Game::Update() {
   if (!snake.alive) return;
-  if (isPaused) return;
+  
+  // Use condition variable for pause handling
+  std::unique_lock<std::mutex> pauseLock(pauseMutex);
+  pauseCV.wait(pauseLock, [this] { return !isPaused || shouldStop; });
+  
+  if (shouldStop) return;
 
   snake.Update();
 
@@ -275,7 +377,7 @@ void Game::Update() {
 
   // Check if there's food
   if (food.x == new_x && food.y == new_y) {
-    score += diffConfig.scorePerFood;
+    UpdateScoreThreadSafe(diffConfig.scorePerFood); // Thread-safe score update
     
     // Call GrowBody() multiple times based on difficulty
     for (int i = 0; i < diffConfig.growthRate; i++) {
@@ -284,10 +386,32 @@ void Game::Update() {
     
     snake.speed += diffConfig.speedIncrease;
     PlaceFood();
+    foodExpired = false; // Reset food timer
+  }
+  
+  // Check if food expired (for advanced difficulties)
+  if (foodExpired && diffConfig.hasFoodTimer) {
+    PlaceFood();
+    foodExpired = false;
   }
 }
 
+void Game::PauseGame() {
+  std::lock_guard<std::mutex> lock(pauseMutex);
+  isPaused = true;
+}
+
+void Game::ResumeGame() {
+  {
+    std::lock_guard<std::mutex> lock(pauseMutex);
+    isPaused = false;
+  }
+  pauseCV.notify_all();
+}
+
 void Game::Reset() {
+  StopBackgroundTasks();
+  
   score = 0;
   snake.alive = true;
   snake.size = 1;
@@ -298,6 +422,9 @@ void Game::Reset() {
   snake.speed = diffConfig.baseSpeed;
   PlaceFood();
   isPaused = false;
+  foodExpired = false;
+  
+  StartBackgroundTasks();
 }
 
 void Game::ChangeState(std::unique_ptr<State> newState) {

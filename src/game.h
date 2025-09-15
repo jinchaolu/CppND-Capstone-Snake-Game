@@ -4,6 +4,11 @@
 #include <random>
 #include <memory>
 #include <vector>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <future>
+#include <atomic>
 #include "SDL.h"
 #include "controller.h"
 #include "renderer.h"
@@ -40,6 +45,7 @@ class Game {
   };
 
   Game(std::size_t grid_width, std::size_t grid_height);
+  ~Game();
   void Run(Controller const &controller, Renderer &renderer,
            std::size_t target_frame_duration);
   
@@ -57,8 +63,8 @@ class Game {
   int GetScore() const { return score; }
   int GetSize() const { return snake.size; }
   bool GetPause() const { return isPaused; }
-  void PauseGame() { isPaused = true; }
-  void ResumeGame() { isPaused = false; }
+  void PauseGame();
+  void ResumeGame();
   Snake& GetSnake() { return snake; }
   SDL_Point& GetFood() { return food; }
   void SetRenderer(Renderer* r) { renderer = r; }
@@ -76,6 +82,11 @@ class Game {
   std::string PromptName();
   void CheckAndUpdateLeaderboard();
   void PlaceFood();
+
+  // Concurrency methods
+  void StartBackgroundTasks();
+  void StopBackgroundTasks();
+  void WaitForLeaderboardLoad();
 
  private:
   Snake snake;
@@ -95,6 +106,22 @@ class Game {
   DifficultyConfig diffConfig;
   void InitializeDifficultyConfig();
   float foodTimer{0.0f};
+
+  // Concurrency members
+  std::thread foodTimerThread;
+  std::thread leaderboardThread;
+  std::mutex scoreMutex;
+  std::mutex pauseMutex;
+  std::condition_variable pauseCV;
+  std::promise<bool> leaderboardPromise;
+  std::future<bool> leaderboardFuture;
+  std::atomic<bool> shouldStop{false};
+  std::atomic<bool> foodExpired{false};
+  
+  // Background task methods
+  void FoodTimerTask();
+  void LoadLeaderboardAsync();
+  void UpdateScoreThreadSafe(int points);
 };
 
 #endif

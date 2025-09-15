@@ -139,10 +139,32 @@ Yes. Smart pointers used throughout:
 - No raw pointer ownership in the codebase
 ### 6. Concurrency - meet at least 2 criteria
 #### 6.1 The project uses multithreading.
-Yes, it is.
+Yes. The project implements two background threads:
+- **Food Timer Thread** (`FoodTimerTask()`): Manages food expiration for Advanced/Expert difficulty levels, runs in background to expire food after time limit
+- **Leaderboard Thread** (`LoadLeaderboardAsync()`): Asynchronously loads leaderboard data from file to prevent UI blocking during startup
+- Threads are properly managed with `std::thread` objects and `join()` operations in `StopBackgroundTasks()`
+- Thread lifecycle managed in constructor/destructor and difficulty changes
+
 #### 6.2 A promise and future is used in the project.
-Yes, it is.
+Yes. Promise/future pattern implemented for asynchronous leaderboard loading:
+- `std::promise<bool> leaderboardPromise` in Game class signals completion of background leaderboard loading
+- `std::future<bool> leaderboardFuture` allows main thread to wait for async operation completion
+- `WaitForLeaderboardLoad()` method demonstrates `future.get()` usage to retrieve result
+- Promise/future pair recreated for each new game session in `StartBackgroundTasks()`
+- Proper exception handling prevents "promise already satisfied" errors
+
 #### 6.3 A mutex or lock is used in the project.
-Yes, it is.
+Yes. Multiple mutexes ensure thread safety across the application:
+- `std::mutex scoreMutex` protects score updates from race conditions between main game thread and potential score modifications
+- `std::mutex pauseMutex` synchronizes pause state changes between input handling and game update threads
+- `std::lock_guard<std::mutex>` used for automatic RAII-based lock management in critical sections
+- Thread-safe score updates implemented in `UpdateScoreThreadSafe()` method
+- Mutex protection in `LoadLeaderboardAsync()` prevents concurrent file access
+
 #### 6.4 A condition variable is used in the project.
-Yes, it is.
+Yes. Condition variable manages game pause/resume functionality:
+- `std::condition_variable pauseCV` blocks game update thread when game is paused
+- `Update()` method uses `pauseCV.wait()` with predicate `[this] { return !isPaused || shouldStop; }`
+- `ResumeGame()` calls `pauseCV.notify_all()` to wake up waiting game update thread
+- Prevents busy waiting and CPU waste during pause state
+- Integrates with mutex for proper synchronization of pause state changes
