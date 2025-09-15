@@ -16,6 +16,40 @@ Game::Game(std::size_t grid_width, std::size_t grid_height)
       random_w(0, static_cast<int>(grid_width - 1)),
       random_h(0, static_cast<int>(grid_height - 1)) {
   PlaceFood();
+  InitializeDifficultyConfig();
+  currentState = std::make_unique<MenuState>();
+}
+
+void Game::InitializeDifficultyConfig() {
+    switch (currentDifficulty) {
+        case Difficulty::Beginner:
+            diffConfig = {0.1f, 1, 1, 0.01f, false, 0};
+            break;
+        case Difficulty::Normal:
+            diffConfig = {0.15f, 2, 2, 0.02f, false, 0};
+            break;
+        case Difficulty::Advanced:
+            diffConfig = {0.2f, 3, 3, 0.03f, true, 10};
+            break;
+        case Difficulty::Expert:
+            diffConfig = {0.25f, 5, 4, 0.04f, true, 7};
+            break;
+    }
+    snake.speed = diffConfig.baseSpeed;
+}
+
+void Game::SetDifficulty(Difficulty diff) {
+    currentDifficulty = diff;
+    InitializeDifficultyConfig();
+    Reset();
+}
+
+Game::Game(std::size_t grid_width, std::size_t grid_height)
+    : snake(grid_width, grid_height),
+      engine(dev()),
+      random_w(0, static_cast<int>(grid_width - 1)),
+      random_h(0, static_cast<int>(grid_height - 1)) {
+  PlaceFood();
   // Start with Menu state
   currentState = std::make_unique<MenuState>();
 }
@@ -92,25 +126,38 @@ void Game::Run(Controller const &controller, Renderer &renderer,
   Uint32 frame_end;
   Uint32 frame_duration;
   int frame_count = 0;
+  bool running = true;
 
-  while (snake.alive) {
+  SetRenderer(&renderer);
+
+  while (running && snake.alive) {
     frame_start = SDL_GetTicks();
 
-    // Handle input, update and render through current state
+    // Input
     currentState->HandleInput(*this, controller);
+
+    // Update
     currentState->Update(*this);
+
+    // Render
     currentState->Render(*this, renderer);
 
     frame_end = SDL_GetTicks();
+
+    // Keep track of how long each loop through the input/update/render cycle takes
     frame_count++;
     frame_duration = frame_end - frame_start;
 
+    // After every second, update the window title
     if (frame_end - title_timestamp >= 1000) {
       renderer.UpdateWindowTitle(score, frame_count);
       frame_count = 0;
       title_timestamp = frame_end;
     }
 
+    // If the time for this frame is too small (i.e. frame_duration is
+    // smaller than the target ms_per_frame), delay the loop to
+    // achieve the correct frame rate.
     if (frame_duration < target_frame_duration) {
       SDL_Delay(target_frame_duration - frame_duration);
     }
@@ -238,6 +285,7 @@ void Game::PlaceFood() {
 
 void Game::Update() {
   if (!snake.alive) return;
+  if (isPaused) return;
 
   snake.Update();
 
@@ -246,12 +294,19 @@ void Game::Update() {
 
   // Check if there's food over here
   if (food.x == new_x && food.y == new_y) {
-    score++;
+    score += diffConfig.scorePerFood;
+    snake.GrowBody(diffConfig.growthRate);
+    snake.speed += diffConfig.speedIncrease;
     PlaceFood();
-    // Grow snake and increase speed.
-    snake.GrowBody();
-    snake.speed += 0.02;
   }
+}
+
+void Game::Reset() {
+  score = 0;
+  snake.Reset();
+  snake.speed = diffConfig.baseSpeed;
+  PlaceFood();
+  isPaused = false;
 }
 
 void Game::ChangeState(std::unique_ptr<State> newState) {

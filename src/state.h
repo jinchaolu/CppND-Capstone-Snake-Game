@@ -40,4 +40,14 @@ class GameOverState : public State {
   void HandleInput(Game& game, Controller const& controller) override;
 };
 
+class DifficultyState : public State {
+ public:
+  DifficultyState() : menuShown(false) {}
+  void Update(Game& game) override;
+  void Render(Game& game, Renderer& renderer) override;
+  void HandleInput(Game& game, Controller const& controller) override;
+ private:
+  bool menuShown;
+};
+
 #endif

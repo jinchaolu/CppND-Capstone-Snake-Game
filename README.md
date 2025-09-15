@@ -98,17 +98,45 @@ Yes. Implemented State pattern using inheritance:
 Yes, it is.
 ### 5. Memory Management - meet at least 3 criteria
 #### 5.1 The project makes use of references in function declarations.
-Yes, it is.
+Yes. Examples include:
+- `void HandleInput(Game& game, Controller const& controller)` in State classes
+- `void Render(Game& game, Renderer& renderer)` in State classes
+- `Snake& GetSnake()` and `SDL_Point& GetFood()` in Game class
+- Pass-by-reference used throughout to avoid unnecessary copying
+
 #### 5.2 The project uses destructors appropriately.
-Yes, it is.
+Yes. Virtual destructors are implemented:
+- Base State class has `virtual ~State() = default;`
+- Derived state classes properly inherit virtual destructor
+- SDL resources are cleaned up in Renderer destructor
+- RAII pattern ensures automatic cleanup
+
 #### 5.3 The project uses scope / Resource Acquisition Is Initialization (RAII) where appropriate.
-Yes, it is.
+Yes. RAII is demonstrated through:
+- SDL window and renderer resources managed in Renderer class constructor/destructor
+- File streams automatically closed when going out of scope in leaderboard functions
+- Smart pointers automatically manage state object lifetimes
+- Local objects properly cleaned up when leaving scope
+
 #### 5.4 The project follows the Rule of 5.
-Yes, it is.
+Yes. Classes that manage resources implement appropriate special member functions:
+- State classes use default constructors/destructors appropriately
+- Renderer class manages SDL resources with proper cleanup
+- Move semantics available for state transitions
+
 #### 5.5 The project uses move semantics to move data instead of copying it, where possible.
-Yes, it is.
+Yes. Move semantics used in:
+- `ChangeState(std::unique_ptr<State> newState)` uses `std::move()`
+- State transitions transfer ownership without copying
+- `std::make_unique` creates objects efficiently
+- Vector operations use move semantics for leaderboard entries
+
 #### 5.6 The project uses smart pointers instead of raw pointers.
-Yes, it is.
+Yes. Smart pointers used throughout:
+- `std::unique_ptr<State> currentState` in Game class for state management
+- `std::make_unique<PlayingState>()`, `std::make_unique<MenuState>()` for state creation
+- Automatic memory management prevents memory leaks
+- No raw pointer ownership in the codebase
 ### 6. Concurrency - meet at least 2 criteria
 #### 6.1 The project uses multithreading.
 Yes, it is.

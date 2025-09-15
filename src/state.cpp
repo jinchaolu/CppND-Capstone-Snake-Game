@@ -56,8 +56,7 @@ void MenuState::HandleInput(Game& game, Controller const& controller) {
         } else if (e.type == SDL_KEYDOWN) {
             switch (e.key.keysym.sym) {
                 case SDLK_n:
-                    game.Reset();
-                    game.ChangeState(std::make_unique<PlayingState>());
+                    game.ChangeState(std::make_unique<DifficultyState>());  // Changed from PlayingState
                     break;
                 case SDLK_l:
                     game.DisplayLeaderboard();
@@ -97,5 +96,50 @@ void GameOverState::HandleInput(Game& game, Controller const& controller) {
 }
 
 void GameOverState::Update(Game& game) {
-    // Game over state doesn't need update logic
+    // GameOver state doesn't need update logic
+}
+
+void DifficultyState::Render(Game& game, Renderer& renderer) {
+    if (!menuShown) {
+        std::cout << "\n=== Select Difficulty ===\n";
+        std::cout << "1. Beginner  - Slower speed, normal scoring\n";
+        std::cout << "2. Normal    - Standard speed and scoring\n";
+        std::cout << "3. Advanced  - Faster speed, triple scoring, timed food\n";
+        std::cout << "4. Expert    - Maximum challenge, highest scoring\n";
+        std::cout << "\nPress 1-4 to select difficulty or ESC to return\n";
+        menuShown = true;
+    }
+}
+
+void DifficultyState::HandleInput(Game& game, Controller const& controller) {
+    SDL_Event e;
+    while (SDL_PollEvent(&e)) {
+        if (e.type == SDL_KEYDOWN) {
+            switch (e.key.keysym.sym) {
+                case SDLK_1:
+                    game.SetDifficulty(Difficulty::Beginner);
+                    game.Reset();
+                    game.ChangeState(std::make_unique<PlayingState>());
+                    break;
+                case SDLK_2:
+                    game.SetDifficulty(Difficulty::Normal);
+                    game.Reset();
+                    game.ChangeState(std::make_unique<PlayingState>());
+                    break;
+                case SDLK_3:
+                    game.SetDifficulty(Difficulty::Advanced);
+                    game.Reset();
+                    game.ChangeState(std::make_unique<PlayingState>());
+                    break;
+                case SDLK_4:
+                    game.SetDifficulty(Difficulty::Expert);
+                    game.Reset();
+                    game.ChangeState(std::make_unique<PlayingState>());
+                    break;
+                case SDLK_ESCAPE:
+                    game.ChangeState(std::make_unique<MenuState>());
+                    break;
+            }
+        }
+    }
 }

@@ -13,6 +13,22 @@
 class Controller;
 class State;
 
+enum class Difficulty {
+    Beginner,
+    Normal,
+    Advanced,
+    Expert
+};
+
+struct DifficultyConfig {
+    float baseSpeed;
+    int scorePerFood;
+    int growthRate;
+    float speedIncrease;
+    bool hasFoodTimer;
+    int foodTimeLimit;
+};
+
 class Game {
  public:
   struct LeaderboardEntry {
@@ -20,6 +36,7 @@ class Game {
     int score;
     std::string date;
     std::string time;
+    Difficulty difficulty;
   };
 
   Game(std::size_t grid_width, std::size_t grid_height);
@@ -46,6 +63,11 @@ class Game {
   SDL_Point& GetFood() { return food; }
   void SetRenderer(Renderer* r) { renderer = r; }
   
+  // Difficulty management
+  void SetDifficulty(Difficulty diff);
+  Difficulty GetDifficulty() const { return currentDifficulty; }
+  const DifficultyConfig& GetConfig() const { return diffConfig; }
+  
   // Leaderboard management
   std::vector<LeaderboardEntry> leaderboard;
   void LoadLeaderboard();
@@ -67,6 +89,12 @@ class Game {
   int score{0};
   bool isPaused{false};
   Renderer* renderer{nullptr};
+
+  // Difficulty settings
+  Difficulty currentDifficulty{Difficulty::Normal};
+  DifficultyConfig diffConfig;
+  void InitializeDifficultyConfig();
+  float foodTimer{0.0f};
 };
 
 #endif
