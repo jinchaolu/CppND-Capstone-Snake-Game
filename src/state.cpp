@@ -44,15 +44,15 @@ void PlayingState::Render(Game& game, Renderer& renderer) {
 void MenuState::Update(Game& game) {
     if (!menuShown) {
         std::cout << "\n=== Snake Game Menu ===\n";
-        std::cout << "1. New Game (Press N)\n";
-        std::cout << "2. Leaderboard (Press L)\n";
-        std::cout << "3. Exit (Press Q)\n";
+        std::cout << "1. New Game (Press N or 1)\n";
+        std::cout << "2. Leaderboard (Press L or 2)\n";
+        std::cout << "3. Exit (Press Q or 3)\n";
         menuShown = true;
     }
 }
 
 void MenuState::Render(Game& game, Renderer& renderer) {
-    SDL_SetWindowTitle(renderer.GetWindow(), "Snake Game - Press N:New Game, L:Leaderboard, Q:Quit");
+    SDL_SetWindowTitle(renderer.GetWindow(), "Snake Game - Press N/1:New Game, L/2:Leaderboard, Q/3:Quit");
 }
 
 void MenuState::HandleInput(Game& game, Controller const& controller) {
@@ -63,14 +63,17 @@ void MenuState::HandleInput(Game& game, Controller const& controller) {
         } else if (e.type == SDL_KEYDOWN) {
             switch (e.key.keysym.sym) {
                 case SDLK_n:
+                case SDLK_1:  // Add number 1 for New Game
                     game.ChangeState(std::make_unique<DifficultyState>());
                     break;
                 case SDLK_l:
+                case SDLK_2:  // Add number 2 for Leaderboard
                     game.DisplayLeaderboard();
                     // After showing leaderboard, reprint menu options
                     menuShown = false;  // Reset flag to show menu again
                     break;
                 case SDLK_q:
+                case SDLK_3:  // Add number 3 for Exit
                     game.GetSnake().alive = false;
                     break;
             }
