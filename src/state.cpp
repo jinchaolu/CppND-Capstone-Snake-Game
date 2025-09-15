@@ -56,7 +56,7 @@ void MenuState::HandleInput(Game& game, Controller const& controller) {
         } else if (e.type == SDL_KEYDOWN) {
             switch (e.key.keysym.sym) {
                 case SDLK_n:
-                    game.ChangeState(std::make_unique<DifficultyState>());  // Changed from PlayingState
+                    game.ChangeState(std::make_unique<DifficultyState>());
                     break;
                 case SDLK_l:
                     game.DisplayLeaderboard();
@@ -99,7 +99,7 @@ void GameOverState::Update(Game& game) {
     // GameOver state doesn't need update logic
 }
 
-void DifficultyState::Render(Game& game, Renderer& renderer) {
+void DifficultyState::Update(Game& game) {
     if (!menuShown) {
         std::cout << "\n=== Select Difficulty ===\n";
         std::cout << "1. Beginner  - Slower speed, normal scoring\n";
@@ -111,10 +111,16 @@ void DifficultyState::Render(Game& game, Renderer& renderer) {
     }
 }
 
+void DifficultyState::Render(Game& game, Renderer& renderer) {
+    SDL_SetWindowTitle(renderer.GetWindow(), "Snake Game - Select Difficulty (1-4)");
+}
+
 void DifficultyState::HandleInput(Game& game, Controller const& controller) {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
-        if (e.type == SDL_KEYDOWN) {
+        if (e.type == SDL_QUIT) {
+            game.GetSnake().alive = false;
+        } else if (e.type == SDL_KEYDOWN) {
             switch (e.key.keysym.sym) {
                 case SDLK_1:
                     game.SetDifficulty(Difficulty::Beginner);

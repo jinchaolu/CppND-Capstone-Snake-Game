@@ -41,25 +41,6 @@ void Game::InitializeDifficultyConfig() {
 void Game::SetDifficulty(Difficulty diff) {
     currentDifficulty = diff;
     InitializeDifficultyConfig();
-    Reset();
-}
-
-Game::Game(std::size_t grid_width, std::size_t grid_height)
-    : snake(grid_width, grid_height),
-      engine(dev()),
-      random_w(0, static_cast<int>(grid_width - 1)),
-      random_h(0, static_cast<int>(grid_height - 1)) {
-  PlaceFood();
-  // Start with Menu state
-  currentState = std::make_unique<MenuState>();
-}
-
-void Game::Reset() {
-  snake = Snake(random_w.max() + 1, random_h.max() + 1);
-  score = 0;
-  isPaused = false;
-  PlaceFood();
-  currentState = std::make_unique<PlayingState>();
 }
 
 void Game::ShowMenu() {
@@ -292,10 +273,15 @@ void Game::Update() {
   int new_x = static_cast<int>(snake.head_x);
   int new_y = static_cast<int>(snake.head_y);
 
-  // Check if there's food over here
+  // Check if there's food
   if (food.x == new_x && food.y == new_y) {
     score += diffConfig.scorePerFood;
-    snake.GrowBody(diffConfig.growthRate);
+    
+    // Call GrowBody() multiple times based on difficulty
+    for (int i = 0; i < diffConfig.growthRate; i++) {
+      snake.GrowBody();
+    }
+    
     snake.speed += diffConfig.speedIncrease;
     PlaceFood();
   }
@@ -303,7 +289,12 @@ void Game::Update() {
 
 void Game::Reset() {
   score = 0;
-  snake.Reset();
+  snake.alive = true;
+  snake.size = 1;
+  snake.head_x = random_w.max() / 2;
+  snake.head_y = random_h.max() / 2;
+  snake.direction = Snake::Direction::kUp;
+  snake.body.clear();
   snake.speed = diffConfig.baseSpeed;
   PlaceFood();
   isPaused = false;
