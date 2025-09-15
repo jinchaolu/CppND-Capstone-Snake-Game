@@ -117,9 +117,17 @@ class Game {
   std::future<bool> leaderboardFuture;
   std::atomic<bool> shouldStop{false};
   std::atomic<bool> foodExpired{false};
+
+  // Food blinking system
+  std::atomic<bool> foodShouldBlink{false};
+  std::atomic<bool> foodVisible{true};
+  std::thread foodBlinkThread;
+  std::chrono::steady_clock::time_point foodSpawnTime;
+  bool IsFoodVisible() const;
   
   // Background task methods
   void FoodTimerTask();
+  void FoodBlinkTask();
   void LoadLeaderboardAsync();
   void UpdateScoreThreadSafe(int points);
 };

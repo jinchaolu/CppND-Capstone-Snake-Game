@@ -37,6 +37,7 @@ void Game::StartBackgroundTasks() {
   // Start food timer thread for advanced difficulties
   if (diffConfig.hasFoodTimer) {
     foodTimerThread = std::thread(&Game::FoodTimerTask, this);
+    foodBlinkThread = std::thread(&Game::FoodBlinkTask, this);
   }
   
   // Start leaderboard loading thread
@@ -45,6 +46,7 @@ void Game::StartBackgroundTasks() {
 
 void Game::StopBackgroundTasks() {
   shouldStop = true;
+  foodShouldBlink = false;
   
   // Wake up any threads waiting on condition variable
   pauseCV.notify_all();
@@ -52,6 +54,11 @@ void Game::StopBackgroundTasks() {
   // Stop food timer thread
   if (foodTimerThread.joinable()) {
     foodTimerThread.join();
+  }
+  
+  // Stop food blink thread
+  if (foodBlinkThread.joinable()) {
+    foodBlinkThread.join();
   }
   
   // Stop leaderboard thread
@@ -63,13 +70,38 @@ void Game::StopBackgroundTasks() {
 void Game::FoodTimerTask() {
   while (!shouldStop) {
     if (diffConfig.hasFoodTimer && !isPaused) {
-      std::this_thread::sleep_for(std::chrono::seconds(diffConfig.foodTimeLimit));
+      auto elapsed = std::chrono::steady_clock::now() - foodSpawnTime;
+      auto elapsedSeconds = std::chrono::duration_cast<std::chrono::seconds>(elapsed).count();
       
-      if (!shouldStop && !isPaused) {
-        foodExpired = true;
-        PlaceFood(); // Place new food when timer expires
+      // Start blinking in the last 3 seconds
+      if (elapsedSeconds >= (diffConfig.foodTimeLimit - 3) && !foodShouldBlink) {
+        foodShouldBlink = true;
       }
+      
+      // Check if food should expire
+      if (elapsedSeconds >= diffConfig.foodTimeLimit) {
+        if (!shouldStop && !isPaused) {
+          foodExpired = true;
+          foodShouldBlink = false;
+          foodVisible = true;
+          PlaceFood();
+        }
+      }
+      
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     } else {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+  }
+}
+
+void Game::FoodBlinkTask() {
+  while (!shouldStop) {
+    if (foodShouldBlink && !isPaused) {
+      foodVisible = !foodVisible;  // Toggle visibility
+      std::this_thread::sleep_for(std::chrono::milliseconds(300)); // Blink every 300ms
+    } else {
+      foodVisible = true;  // Always visible when not blinking
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
   }
@@ -348,14 +380,21 @@ void Game::PlaceFood() {
   while (true) {
     x = random_w(engine);
     y = random_h(engine);
-    // Check that the location is not occupied by a snake item before placing
-    // food.
+    // Check that the location is not occupied by a snake item before placing food.
     if (!snake.SnakeCell(x, y)) {
       food.x = x;
       food.y = y;
+      foodSpawnTime = std::chrono::steady_clock::now(); // Record spawn time
+      foodShouldBlink = false;
+      foodVisible = true;
+      foodExpired = false;
       return;
     }
   }
+}
+
+bool Game::IsFoodVisible() const {
+  return foodVisible;
 }
 
 void Game::Update() {

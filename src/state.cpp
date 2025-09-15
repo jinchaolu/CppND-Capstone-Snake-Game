@@ -37,8 +37,9 @@ void PlayingState::Update(Game& game) {
     }
 }
 
-void PlayingState::Render(Game& game, Renderer& renderer) {
-    renderer.Render(game.GetSnake(), game.GetFood());
+void GameOverState::Render(Game& game, Renderer& renderer) {
+    renderer.Render(game.GetSnake(), game.GetFood(), game.IsFoodVisible());
+    SDL_SetWindowTitle(renderer.GetWindow(), "Game Over! Press Enter to restart or Q to quit");
 }
 
 void MenuState::Update(Game& game) {
