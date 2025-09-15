@@ -68,6 +68,7 @@ class Game {
   Snake& GetSnake() { return snake; }
   SDL_Point& GetFood() { return food; }
   void SetRenderer(Renderer* r) { renderer = r; }
+  bool IsFoodVisible() const;
   
   // Difficulty management
   void SetDifficulty(Difficulty diff);
@@ -123,7 +124,6 @@ class Game {
   std::atomic<bool> foodVisible{true};
   std::thread foodBlinkThread;
   std::chrono::steady_clock::time_point foodSpawnTime;
-  bool IsFoodVisible() const;
   
   // Background task methods
   void FoodTimerTask();
