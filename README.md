@@ -168,3 +168,74 @@ Yes. Condition variable manages game pause/resume functionality:
 - `ResumeGame()` calls `pauseCV.notify_all()` to wake up waiting game update thread
 - Prevents busy waiting and CPU waste during pause state
 - Integrates with mutex for proper synchronization of pause state changes
+
+# Overview
+* C++/SDL2 Snake with menu, difficulty selection, pause/resume, leaderboard, and timed food (with blinking warning).
+* Concurrency is used for background tasks (timed food, leaderboard loading).
+# Prerequisites (macOS)
+* Install dependencies with Homebrew:
+```
+brew install cmake sdl2
+```
+# Build
+```
+git clone <your-repo-url>
+cd CppND-Capstone-Snake-Game
+mkdir build && cd build
+cmake ..
+make -j
+```
+# Run
+```
+./SnakeGame
+```
+# Menu & Navigation
+* Main Menu
+  * N or 1: New Game
+  * L or 2: Leaderboard
+  * Q or 3: Quit
+* Difficulty Selection
+  * 1: Beginner
+  * 2: Normal
+  * 3: Advanced (timed food + blinking warning)
+  * 4: Expert (timed food + blinking warning)
+  * ESC: Back to Menu
+
+# In-Game Controls
+* Arrow Keys: Move
+* SPACE: Pause/Resume
+* Q: Quit (works from gameplay and pause)
+* Window title shows current score and FPS.
+# Gameplay Behavior
+* Eating food:
+  * Increases score (amount depends on difficulty).
+  * Grows the snake (rate depends on difficulty).
+  * Slightly increases speed per food.
+* Timed Food (Advanced/Expert):
+  * Food expires after a time limit.
+  * Blinks during the last 3 seconds before disappearing.
+  * New food spawns on expiration.
+* Game Over:
+  * Press Enter to restart, Q to quit.
+  * Leaderboard persists at Leaderboard.txt (created on first run). If eligible, you may be prompted in the console for a name.
+# Files & Data
+* Leaderboard: Leaderboard.txt (auto-created with defaults if missing).
+* The game avoids placing food on the snake’s body.
+# Troubleshooting
+* SDL2 not found:
+  * Ensure SDL2 is installed via Homebrew and re-run cmake.
+* Thread/pthread link errors:
+  * The project links Threads::Threads in CMake; re-run cmake from a clean build folder:
+```
+cd build
+rm -rf *
+cmake ..
+make -j
+```
+# Optional (Linux)
+```
+sudo apt-get install -y cmake libsdl2-dev build-essential
+mkdir build && cd build && cmake .. && make -j && ./SnakeGame
+```
+
+Tip: Run from the build directory so the app can create/read
