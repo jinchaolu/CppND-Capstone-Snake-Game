@@ -110,7 +110,7 @@ void Game::FoodBlinkTask() {
 void Game::LoadLeaderboardAsync() {
   try {
     std::lock_guard<std::mutex> lock(scoreMutex);
-    LoadLeaderboard(); // Call existing method
+    LoadLeaderboard();
     
     // Only set value if promise is valid
     try {
@@ -193,7 +193,7 @@ void Game::DisplayLeaderboard() {
                 << " (" << leaderboard[i].date << " " << leaderboard[i].time << ")\n";
     }
   }
-  std::cout << "\nPress any key to continue...\n";  // Updated message
+  std::cout << "\nPress any key to continue...\n";
 }
 
 void Game::HandleMenuInput() {
@@ -201,7 +201,7 @@ void Game::HandleMenuInput() {
   bool choice_made = false;
   while (!choice_made && SDL_WaitEvent(&e)) {
     if (e.type == SDL_QUIT) {
-      snake.alive = false;  // This will exit the game
+      snake.alive = false;
       return;
     }
     if (e.type == SDL_KEYDOWN) {
@@ -384,7 +384,7 @@ void Game::PlaceFood() {
     if (!snake.SnakeCell(x, y)) {
       food.x = x;
       food.y = y;
-      foodSpawnTime = std::chrono::steady_clock::now(); // Record spawn time
+      foodSpawnTime = std::chrono::steady_clock::now();
       foodShouldBlink = false;
       foodVisible = true;
       foodExpired = false;

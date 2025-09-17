@@ -38,7 +38,7 @@ void Controller::HandleInput(bool &running, Snake &snake, Game &game) const {
           break;
           
         case SDLK_SPACE:
-          running = !running;  // Toggle pause state
+          running = !running;
           break;
 
         case SDLK_q:

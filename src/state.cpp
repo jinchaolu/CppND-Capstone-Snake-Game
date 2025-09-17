@@ -9,7 +9,7 @@ void PlayingState::HandleInput(Game& game, Controller const& controller) {
     // Check if snake was killed (quit command)
     if (!game.GetSnake().alive) {
         // Notify condition variable to wake up waiting threads
-        game.ResumeGame(); // This will wake up the Update thread
+        game.ResumeGame();
         return;
     }
     
@@ -63,17 +63,17 @@ void MenuState::HandleInput(Game& game, Controller const& controller) {
         } else if (e.type == SDL_KEYDOWN) {
             switch (e.key.keysym.sym) {
                 case SDLK_n:
-                case SDLK_1:  // Add number 1 for New Game
+                case SDLK_1:
                     game.ChangeState(std::make_unique<DifficultyState>());
                     break;
                 case SDLK_l:
-                case SDLK_2:  // Add number 2 for Leaderboard
+                case SDLK_2:
                     game.DisplayLeaderboard();
                     // After showing leaderboard, reprint menu options
                     menuShown = false;  // Reset flag to show menu again
                     break;
                 case SDLK_q:
-                case SDLK_3:  // Add number 3 for Exit
+                case SDLK_3:
                     game.GetSnake().alive = false;
                     break;
             }
