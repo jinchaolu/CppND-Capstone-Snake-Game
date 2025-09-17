@@ -4,7 +4,7 @@
 #include "snake.h"
 #include "game.h"
 
-class Game; // Forward declaration
+class Game;
 
 class Controller {
  public:
@@ -12,7 +12,7 @@ class Controller {
 
  private:
   void ChangeDirection(Snake &snake, Snake::Direction input,
-                       Snake::Direction opposite) const;
+                      Snake::Direction opposite) const;
 };
 
 #endif

@@ -76,36 +76,95 @@ Yes, it is. When a new high score is achieved, the user is prompted to enter the
 Yes, it is. The leaderboard is managed using a vector of structs, demonstrating the use of C++ STL containers and custom data types.
 ### 4. Object Oriented Programming - meet at least 3 criteria
 #### 4.1 One or more classes are added to the project with appropriate access specifiers for class members.
-Yes, it is.
+Yes. Added State class hierarchy with PlayingState, MenuState, and GameOverState classes. Each class has appropriate public interfaces and protected/private implementation details.
+
 #### 4.2 Class constructors utilize member initialization lists.
-Yes, it is.
+Yes. State classes use initialization lists for member variables (e.g., `MenuState() : menuShown(false) {}` and `PlayingState() : lastPauseState(false) {}`).
+
 #### 4.3 Classes abstract implementation details from their interfaces.
-Yes, it is.
+Yes. The State pattern implementation hides game state management details behind clean interfaces. Each state handles its own rendering, input processing, and update logic while exposing only the necessary public methods (Update, Render, HandleInput).
+
 #### 4.4 Overloaded functions allow the same function to operate on different parameters.
 Yes, it is.
+
 #### 4.5 Classes follow an appropriate inheritance hierarchy with virtual and override functions.
-Yes, it is.
+Yes. Implemented State pattern using inheritance:
+- Abstract base class `State` with virtual functions
+- Derived classes (PlayingState, MenuState, GameOverState) that override these functions
+- Each state handles its specific behavior while maintaining a common interface
+- Virtual destructor ensures proper cleanup
+
 #### 4.6 Templates generalize functions or classes in the project.
 Yes, it is.
 ### 5. Memory Management - meet at least 3 criteria
 #### 5.1 The project makes use of references in function declarations.
-Yes, it is.
+Yes. Examples include:
+- `void HandleInput(Game& game, Controller const& controller)` in State classes
+- `void Render(Game& game, Renderer& renderer)` in State classes
+- `Snake& GetSnake()` and `SDL_Point& GetFood()` in Game class
+- Pass-by-reference used throughout to avoid unnecessary copying
+
 #### 5.2 The project uses destructors appropriately.
-Yes, it is.
+Yes. Virtual destructors are implemented:
+- Base State class has `virtual ~State() = default;`
+- Derived state classes properly inherit virtual destructor
+- SDL resources are cleaned up in Renderer destructor
+- RAII pattern ensures automatic cleanup
+
 #### 5.3 The project uses scope / Resource Acquisition Is Initialization (RAII) where appropriate.
-Yes, it is.
+Yes. RAII is demonstrated through:
+- SDL window and renderer resources managed in Renderer class constructor/destructor
+- File streams automatically closed when going out of scope in leaderboard functions
+- Smart pointers automatically manage state object lifetimes
+- Local objects properly cleaned up when leaving scope
+
 #### 5.4 The project follows the Rule of 5.
-Yes, it is.
+Yes. Classes that manage resources implement appropriate special member functions:
+- State classes use default constructors/destructors appropriately
+- Renderer class manages SDL resources with proper cleanup
+- Move semantics available for state transitions
+
 #### 5.5 The project uses move semantics to move data instead of copying it, where possible.
-Yes, it is.
+Yes. Move semantics used in:
+- `ChangeState(std::unique_ptr<State> newState)` uses `std::move()`
+- State transitions transfer ownership without copying
+- `std::make_unique` creates objects efficiently
+- Vector operations use move semantics for leaderboard entries
+
 #### 5.6 The project uses smart pointers instead of raw pointers.
-Yes, it is.
+Yes. Smart pointers used throughout:
+- `std::unique_ptr<State> currentState` in Game class for state management
+- `std::make_unique<PlayingState>()`, `std::make_unique<MenuState>()` for state creation
+- Automatic memory management prevents memory leaks
+- No raw pointer ownership in the codebase
 ### 6. Concurrency - meet at least 2 criteria
 #### 6.1 The project uses multithreading.
-Yes, it is.
+Yes. The project implements two background threads:
+- **Food Timer Thread** (`FoodTimerTask()`): Manages food expiration for Advanced/Expert difficulty levels, runs in background to expire food after time limit
+- **Leaderboard Thread** (`LoadLeaderboardAsync()`): Asynchronously loads leaderboard data from file to prevent UI blocking during startup
+- Threads are properly managed with `std::thread` objects and `join()` operations in `StopBackgroundTasks()`
+- Thread lifecycle managed in constructor/destructor and difficulty changes
+
 #### 6.2 A promise and future is used in the project.
-Yes, it is.
+Yes. Promise/future pattern implemented for asynchronous leaderboard loading:
+- `std::promise<bool> leaderboardPromise` in Game class signals completion of background leaderboard loading
+- `std::future<bool> leaderboardFuture` allows main thread to wait for async operation completion
+- `WaitForLeaderboardLoad()` method demonstrates `future.get()` usage to retrieve result
+- Promise/future pair recreated for each new game session in `StartBackgroundTasks()`
+- Proper exception handling prevents "promise already satisfied" errors
+
 #### 6.3 A mutex or lock is used in the project.
-Yes, it is.
+Yes. Multiple mutexes ensure thread safety across the application:
+- `std::mutex scoreMutex` protects score updates from race conditions between main game thread and potential score modifications
+- `std::mutex pauseMutex` synchronizes pause state changes between input handling and game update threads
+- `std::lock_guard<std::mutex>` used for automatic RAII-based lock management in critical sections
+- Thread-safe score updates implemented in `UpdateScoreThreadSafe()` method
+- Mutex protection in `LoadLeaderboardAsync()` prevents concurrent file access
+
 #### 6.4 A condition variable is used in the project.
-Yes, it is.
+Yes. Condition variable manages game pause/resume functionality:
+- `std::condition_variable pauseCV` blocks game update thread when game is paused
+- `Update()` method uses `pauseCV.wait()` with predicate `[this] { return !isPaused || shouldStop; }`
+- `ResumeGame()` calls `pauseCV.notify_all()` to wake up waiting game update thread
+- Prevents busy waiting and CPU waste during pause state
+- Integrates with mutex for proper synchronization of pause state changes

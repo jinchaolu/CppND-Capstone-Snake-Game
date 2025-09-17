@@ -1,28 +1,172 @@
+#include "game.h"
+#include "state.h"
 #include <algorithm>
-#include <regex>
+#include <chrono>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <regex>
 #include <string>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "game.h"
-#include <iostream>
-#include "SDL.h"
 
 Game::Game(std::size_t grid_width, std::size_t grid_height)
     : snake(grid_width, grid_height),
       engine(dev()),
       random_w(0, static_cast<int>(grid_width - 1)),
-      random_h(0, static_cast<int>(grid_height - 1)),
-      state(GameState::Menu) {
+      random_h(0, static_cast<int>(grid_height - 1)) {
   PlaceFood();
+  InitializeDifficultyConfig();
+  currentState = std::make_unique<MenuState>();
+  StartBackgroundTasks();
 }
 
-void Game::Reset() {
-  snake = Snake(random_w.max() + 1, random_h.max() + 1);
-  score = 0;
-  isPaused = false;
-  PlaceFood();
-  state = GameState::Playing;
+Game::~Game() {
+  snake.alive = false;
+  pauseCV.notify_all();
+  StopBackgroundTasks();
+}
+
+void Game::StartBackgroundTasks() {
+  shouldStop = false;
+  
+  // Create new promise/future pair each time
+  leaderboardPromise = std::promise<bool>();
+  leaderboardFuture = leaderboardPromise.get_future();
+  
+  // Start food timer thread for advanced difficulties
+  if (diffConfig.hasFoodTimer) {
+    foodTimerThread = std::thread(&Game::FoodTimerTask, this);
+    foodBlinkThread = std::thread(&Game::FoodBlinkTask, this);
+  }
+  
+  // Start leaderboard loading thread
+  leaderboardThread = std::thread(&Game::LoadLeaderboardAsync, this);
+}
+
+void Game::StopBackgroundTasks() {
+  shouldStop = true;
+  foodShouldBlink = false;
+  
+  // Wake up any threads waiting on condition variable
+  pauseCV.notify_all();
+  
+  // Stop food timer thread
+  if (foodTimerThread.joinable()) {
+    foodTimerThread.join();
+  }
+  
+  // Stop food blink thread
+  if (foodBlinkThread.joinable()) {
+    foodBlinkThread.join();
+  }
+  
+  // Stop leaderboard thread
+  if (leaderboardThread.joinable()) {
+    leaderboardThread.join();
+  }
+}
+
+void Game::FoodTimerTask() {
+  while (!shouldStop) {
+    if (diffConfig.hasFoodTimer && !isPaused) {
+      auto elapsed = std::chrono::steady_clock::now() - foodSpawnTime;
+      auto elapsedSeconds = std::chrono::duration_cast<std::chrono::seconds>(elapsed).count();
+      
+      // Start blinking in the last 3 seconds
+      if (elapsedSeconds >= (diffConfig.foodTimeLimit - 3) && !foodShouldBlink) {
+        foodShouldBlink = true;
+      }
+      
+      // Check if food should expire
+      if (elapsedSeconds >= diffConfig.foodTimeLimit) {
+        if (!shouldStop && !isPaused) {
+          foodExpired = true;
+          foodShouldBlink = false;
+          foodVisible = true;
+          PlaceFood();
+        }
+      }
+      
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    } else {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+  }
+}
+
+void Game::FoodBlinkTask() {
+  while (!shouldStop) {
+    if (foodShouldBlink && !isPaused) {
+      foodVisible = !foodVisible;  // Toggle visibility
+      std::this_thread::sleep_for(std::chrono::milliseconds(300)); // Blink every 300ms
+    } else {
+      foodVisible = true;  // Always visible when not blinking
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+  }
+}
+
+void Game::LoadLeaderboardAsync() {
+  try {
+    std::lock_guard<std::mutex> lock(scoreMutex);
+    LoadLeaderboard();
+    
+    // Only set value if promise is valid
+    try {
+      leaderboardPromise.set_value(true);
+    } catch (const std::future_error& e) {
+      // Promise already satisfied, ignore
+    }
+  } catch (...) {
+    try {
+      leaderboardPromise.set_value(false);
+    } catch (const std::future_error& e) {
+      // Promise already satisfied, ignore
+    }
+  }
+}
+
+void Game::WaitForLeaderboardLoad() {
+  // Wait for leaderboard to finish loading
+  if (leaderboardFuture.valid()) {
+    try {
+      bool success = leaderboardFuture.get();
+      if (!success) {
+        std::cerr << "Failed to load leaderboard asynchronously\n";
+      }
+    } catch (const std::future_error& e) {
+      std::cerr << "Future error: " << e.what() << "\n";
+    }
+  }
+}
+
+void Game::UpdateScoreThreadSafe(int points) {
+  std::lock_guard<std::mutex> lock(scoreMutex);
+  score += points;
+}
+
+void Game::InitializeDifficultyConfig() {
+    switch (currentDifficulty) {
+        case Difficulty::Beginner:
+            diffConfig = {0.1f, 1, 1, 0.01f, false, 0};
+            break;
+        case Difficulty::Normal:
+            diffConfig = {0.15f, 2, 2, 0.02f, false, 0};
+            break;
+        case Difficulty::Advanced:
+            diffConfig = {0.2f, 3, 3, 0.03f, true, 10};
+            break;
+        case Difficulty::Expert:
+            diffConfig = {0.25f, 5, 4, 0.04f, true, 7};
+            break;
+    }
+    snake.speed = diffConfig.baseSpeed;
+}
+
+void Game::SetDifficulty(Difficulty diff) {
+  currentDifficulty = diff;
+  InitializeDifficultyConfig();
 }
 
 void Game::ShowMenu() {
@@ -30,7 +174,11 @@ void Game::ShowMenu() {
   std::cout << "1. New Game (Press N)\n";
   std::cout << "2. Leaderboard (Press L)\n";
   std::cout << "3. Exit (Press Q)\n";
-  SDL_SetWindowTitle(SDL_GetWindowFromID(1), "Snake Game - Menu (N: New Game, L: Leaderboard, Q: Exit)");
+  
+  // Set window title for menu state
+  if (renderer) {
+    SDL_SetWindowTitle(SDL_GetWindowFromID(1), "Snake Game - Press N:New Game, L:Leaderboard, Q:Quit");
+  }
 }
 
 void Game::DisplayLeaderboard() {
@@ -45,7 +193,7 @@ void Game::DisplayLeaderboard() {
                 << " (" << leaderboard[i].date << " " << leaderboard[i].time << ")\n";
     }
   }
-  std::cout << "\nPress M to return to menu\n";
+  std::cout << "\nPress any key to continue...\n";
 }
 
 void Game::HandleMenuInput() {
@@ -53,21 +201,21 @@ void Game::HandleMenuInput() {
   bool choice_made = false;
   while (!choice_made && SDL_WaitEvent(&e)) {
     if (e.type == SDL_QUIT) {
-      state = GameState::Menu;  // This will be checked in the main loop
+      snake.alive = false;
       return;
     }
     if (e.type == SDL_KEYDOWN) {
       switch (e.key.keysym.sym) {
         case SDLK_n:  // New Game
           Reset();
-          state = GameState::Playing;
+          currentState = std::make_unique<PlayingState>();
           choice_made = true;
           break;
         case SDLK_l:  // Leaderboard
           DisplayLeaderboard();
           break;
         case SDLK_q:  // Quit
-          state = GameState::Menu;  // This will be checked in the main loop
+          snake.alive = false;
           choice_made = true;
           return;
         case SDLK_m:  // Return to menu from leaderboard
@@ -86,56 +234,30 @@ void Game::Run(Controller const &controller, Renderer &renderer,
   Uint32 frame_duration;
   int frame_count = 0;
   bool running = true;
-  
-  ShowMenu();
 
-  while (running) {
+  SetRenderer(&renderer);
+
+  while (running && snake.alive) {
     frame_start = SDL_GetTicks();
 
-    if (state == GameState::Menu) {
-      HandleMenuInput();
-      if (state == GameState::Menu) {  // If quit was selected
-        running = false;
-      }
-    } else if (state == GameState::Playing) {
-      controller.HandleInput(running, snake, *this);
-      if (!isPaused) {
-        Update();
-      }
-      renderer.Render(snake, food);
+    // Input
+    currentState->HandleInput(*this, controller);
 
-      if (!snake.alive) {
-        state = GameState::GameOver;
-        CheckAndUpdateLeaderboard();
-        SDL_SetWindowTitle(SDL_GetWindowFromID(1), "Game Over! Press Enter to restart, M for menu");
-      }
-    } else if (state == GameState::GameOver) {
-      SDL_Event e;
-      while (SDL_PollEvent(&e)) {
-        if (e.type == SDL_QUIT) {
-          running = false;
-        } else if (e.type == SDL_KEYDOWN) {
-          if (e.key.keysym.sym == SDLK_RETURN) {
-            Reset();
-          } else if (e.key.keysym.sym == SDLK_m) {
-            state = GameState::Menu;
-            ShowMenu();
-          }
-        }
-      }
-      renderer.Render(snake, food);
-    }
+    // Update
+    currentState->Update(*this);
+
+    // Render
+    currentState->Render(*this, renderer);
 
     frame_end = SDL_GetTicks();
 
-    // Keep track of how long each loop through the input/update/render cycle
-    // takes.
+    // Keep track of how long each loop through the input/update/render cycle takes
     frame_count++;
     frame_duration = frame_end - frame_start;
 
-    // After every second, update the window title.
+    // After every second, update the window title
     if (frame_end - title_timestamp >= 1000) {
-      renderer.UpdateWindowTitle(score, frame_count, isPaused);
+      renderer.UpdateWindowTitle(score, frame_count);
       frame_count = 0;
       title_timestamp = frame_end;
     }
@@ -179,7 +301,6 @@ void Game::LoadLeaderboard() {
   
   std::string line;
   std::getline(file, line); // skip header
-  std::cout << "Header line: " << line << "\n";
   while (std::getline(file, line)) {
     size_t p1 = line.find(',');
     size_t p2 = line.find(',', p1+1);
@@ -194,7 +315,6 @@ void Game::LoadLeaderboard() {
     entry.date = line.substr(p2+1, p3-p2-1);
     entry.time = line.substr(p3+1);
     leaderboard.push_back(entry);
-    std::cout << "Added entry: " << entry.name << " - Score: " << entry.score << "\n";
   }
 }
 
@@ -260,36 +380,89 @@ void Game::PlaceFood() {
   while (true) {
     x = random_w(engine);
     y = random_h(engine);
-    // Check that the location is not occupied by a snake item before placing
-    // food.
+    // Check that the location is not occupied by a snake item before placing food.
     if (!snake.SnakeCell(x, y)) {
       food.x = x;
       food.y = y;
+      foodSpawnTime = std::chrono::steady_clock::now();
+      foodShouldBlink = false;
+      foodVisible = true;
+      foodExpired = false;
       return;
     }
   }
 }
 
+bool Game::IsFoodVisible() const {
+  return foodVisible;
+}
+
 void Game::Update() {
   if (!snake.alive) return;
+  
+  // Use condition variable for pause handling
+  std::unique_lock<std::mutex> pauseLock(pauseMutex);
+  pauseCV.wait(pauseLock, [this] { return !isPaused || shouldStop || !snake.alive; });
+  
+  if (shouldStop || !snake.alive) return;
 
   snake.Update();
 
   int new_x = static_cast<int>(snake.head_x);
   int new_y = static_cast<int>(snake.head_y);
 
-  // Check if there's food over here
+  // Check if there's food
   if (food.x == new_x && food.y == new_y) {
-    score++;
+    UpdateScoreThreadSafe(diffConfig.scorePerFood);
+    
+    // Call GrowBody() multiple times based on difficulty
+    for (int i = 0; i < diffConfig.growthRate; i++) {
+      snake.GrowBody();
+    }
+    
+    snake.speed += diffConfig.speedIncrease;
     PlaceFood();
-    // Grow snake and increase speed.
-    snake.GrowBody();
-    snake.speed += 0.02;
+    foodExpired = false;
+  }
+  
+  // Check if food expired (for advanced difficulties)
+  if (foodExpired && diffConfig.hasFoodTimer) {
+    PlaceFood();
+    foodExpired = false;
   }
 }
 
-int Game::GetScore() const { return score; }
-int Game::GetSize() const { return snake.size; }
-bool Game::GetPause() const { return isPaused; }
-void Game::PauseGame() { isPaused = true; }
-void Game::ResumeGame() { isPaused = false; }
+void Game::PauseGame() {
+  std::lock_guard<std::mutex> lock(pauseMutex);
+  isPaused = true;
+}
+
+void Game::ResumeGame() {
+  {
+    std::lock_guard<std::mutex> lock(pauseMutex);
+    isPaused = false;
+  }
+  pauseCV.notify_all();
+}
+
+void Game::Reset() {
+  StopBackgroundTasks();
+  
+  score = 0;
+  snake.alive = true;
+  snake.size = 1;
+  snake.head_x = random_w.max() / 2;
+  snake.head_y = random_h.max() / 2;
+  snake.direction = Snake::Direction::kUp;
+  snake.body.clear();
+  snake.speed = diffConfig.baseSpeed;
+  PlaceFood();
+  isPaused = false;
+  foodExpired = false;
+  
+  StartBackgroundTasks();
+}
+
+void Game::ChangeState(std::unique_ptr<State> newState) {
+  currentState = std::move(newState);
+}

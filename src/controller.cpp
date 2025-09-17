@@ -1,7 +1,6 @@
 #include "controller.h"
 #include <iostream>
 #include "SDL.h"
-#include "snake.h"
 
 void Controller::ChangeDirection(Snake &snake, Snake::Direction input,
                                  Snake::Direction opposite) const {
@@ -14,6 +13,8 @@ void Controller::HandleInput(bool &running, Snake &snake, Game &game) const {
   while (SDL_PollEvent(&e)) {
     if (e.type == SDL_QUIT) {
       running = false;
+      snake.alive = false;
+      return;
     } else if (e.type == SDL_KEYDOWN) {
       switch (e.key.keysym.sym) {
         case SDLK_UP:
@@ -35,18 +36,15 @@ void Controller::HandleInput(bool &running, Snake &snake, Game &game) const {
           ChangeDirection(snake, Snake::Direction::kRight,
                           Snake::Direction::kLeft);
           break;
+          
         case SDLK_SPACE:
-          // Toggle between pausing and resuming game
-          if (game.GetPause()) {
-            game.ResumeGame();
-          } else {
-            game.PauseGame();
-          }
+          running = !running;
           break;
-        default: {
-          // Print key value for debug
-          // std::cout << "e.key.keysym.sym: " << e.key.keysym.sym << std::endl;
-        }
+
+        case SDLK_q:
+          running = false;
+          snake.alive = false;
+          break;
       }
     }
   }
